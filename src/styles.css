@@ -1,0 +1,50 @@
+body {
+    display: flex;
+    height: 100vh;
+    margin: 0;
+}
+
+.main {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+}
+
+.column {
+    padding: 10px;
+    overflow-y: auto;
+}
+
+#object-list {
+    width: 20%;
+    background-color: #f0f0f0;
+    border-right: 1px solid #ccc;
+}
+
+#canvas-container {
+    width: 60%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fff;
+}
+
+#canvas {
+    border: 1px solid #000;
+    cursor: crosshair;
+}
+
+#properties-panel {
+    width: 20%;
+    background-color: #f0f0f0;
+    border-left: 1px solid #ccc;
+}
+
+button {
+    margin-top: 10px;
+}
+
+input[type="text"], input[type="number"] {
+    width: 100%;
+    margin-bottom: 10px;
+}

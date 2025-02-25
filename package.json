@@ -1,0 +1,15 @@
+{
+  "name": "badge-maker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx http-server",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "canvas"
+  ],
+  "author": "mikhail.angelov@gmail.com",
+  "license": "MIT"
+}
