@@ -2,6 +2,8 @@
 
 Badge Maker is a web application that allows users to draw shapes and text on a canvas, manage the objects, and export the canvas as a PNG file. The application is built using pure JavaScript and IndexedDB for persistent storage.
 
+[Live DEMO](https://mikhail-angelov.github.io/badge-maker/src/)
+
 ## Features
 
 - Draw shapes (rectangle, circle) and text on a canvas
