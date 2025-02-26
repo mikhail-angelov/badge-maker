@@ -10,10 +10,20 @@
     <div class="main">
       <div class="column" id="object-list">
         <h2>3D Badge maker</h2>
-        <button id="add-shape">+ Add</button>
         <ul id="object-items"></ul>
       </div>
       <div class="column" id="canvas-container">
+        <div id="tool-panel">
+          <button class="tool-button" data-shape="rectangle">Rect</button>
+          <button class="tool-button" data-shape="circle">Circle</button>
+          <button class="tool-button" data-shape="text">Text</button>
+          <button class="tool-button" data-shape="circle-text">
+            Circle Text
+          </button>
+          <input type="file" id="image-loader" accept="image/*" style="display: none;">
+          <button id="load-image">Image</button>
+          <input type="color" id="color-picker" value="#000000">
+        </div>
         <canvas id="canvas" width="800" height="600"></canvas>
       </div>
       <div class="column" id="properties-panel">

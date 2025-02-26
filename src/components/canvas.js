@@ -1,4 +1,4 @@
-import { renderer } from "../store/renderers.js";
+import renderer from "../store/renderer.js";
 
 class Canvas {
   constructor(canvasElement, store) {
@@ -15,12 +15,61 @@ class Canvas {
     this.offsetY = 0;
     this.scale = 1;
     this.renderScheduled = false;
+    this.newShapePlaceholder = null;
+    this.selectedColor = "#000000";
+    this.imageToLoad = null;
 
     this.canvas.addEventListener("click", this.handleCanvasClick.bind(this));
     this.canvas.addEventListener("mousedown", this.handleMouseDown.bind(this));
     this.canvas.addEventListener("mousemove", this.handleMouseMove.bind(this));
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Delete") {
+        const selectedObject = this.store.getSelectedObject();
+        if (selectedObject) {
+          this.store.removeObject(selectedObject.id);
+        }
+      }
+    });
+    document.querySelectorAll(".tool-button").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        this.newShapePlaceholder = {
+          type: event.target.dataset.shape,
+        };
+        this.setCursor("crosshair");
+      });
+    });
+    document
+      .getElementById("color-picker")
+      .addEventListener("input", (event) => {
+        this.selectedColor = event.target.value;
+      });
+
+    document.getElementById("load-image").addEventListener("click", () => {
+      document.getElementById("image-loader").click();
+    });
+
+    document
+      .getElementById("image-loader")
+      .addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              this.newShapePlaceholder = {
+                type: "image",
+                imageSrc: img.src,
+              };
+              this.setCursor("crosshair");
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
   }
 
   handleMouseDown(event) {
@@ -28,38 +77,57 @@ class Canvas {
     const x = (event.clientX - rect.left) / this.scale;
     const y = (event.clientY - rect.top) / this.scale;
 
-    const objects = this.store.getObjects();
-    for (const object of objects) {
-      if (this.isPointInObject(x, y, object)) {
-        this.isDragging = true;
-        this.draggedObject = object;
-        this.offsetX = x - object.properties.x;
-        this.offsetY = y - object.properties.y;
-        this.store.selectObject(object);
-        break;
+    if (this.newShapePlaceholder) {
+      this.isDragging = true;
+      this.newShapePlaceholder.x = x;
+      this.newShapePlaceholder.y = y;
+    } else {
+      const objects = this.store.getObjects();
+      for (const object of objects) {
+        if (renderer.isPointInShape(x, y, object)) {
+          this.isDragging = true;
+          this.draggedObject = object;
+          this.offsetX = x - object.properties.x;
+          this.offsetY = y - object.properties.y;
+          this.store.selectObject(object);
+          this.setCursor("grabbing");
+          break;
+        }
       }
     }
   }
 
   handleMouseMove(event) {
-    if (this.isDragging && this.draggedObject) {
-      const rect = this.canvas.getBoundingClientRect();
-      const x = (event.clientX - rect.left) / this.scale;
-      const y = (event.clientY - rect.top) / this.scale;
-
+    if (!this.isDragging) {
+      return;
+    }
+    const rect = this.canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / this.scale;
+    const y = (event.clientY - rect.top) / this.scale;
+    if (this.newShapePlaceholder) {
+      this.newShapePlaceholder.width = x - this.newShapePlaceholder.x;
+      this.newShapePlaceholder.height = y - this.newShapePlaceholder.y;
+    } else if (this.draggedObject) {
       this.draggedObject.properties.x = x - this.offsetX;
       this.draggedObject.properties.y = y - this.offsetY;
-      this.scheduleRender();
     }
+    this.scheduleRender();
   }
 
-  handleMouseUp() {
-    if (this.isDragging && this.draggedObject) {
+  handleMouseUp(event) {
+    if (this.isDragging && this.newShapePlaceholder) {
+      this.store.addShape(this.newShapePlaceholder.type, {
+        ...this.newShapePlaceholder,
+        color: this.selectedColor,
+      });
+    } else if (this.isDragging && this.draggedObject) {
       const { id, properties } = this.draggedObject;
       this.store.updateProps(id, properties);
     }
+    this.setCursor("default");
     this.isDragging = false;
     this.draggedObject = null;
+    this.newShapePlaceholder = null;
   }
 
   handleCanvasClick(event) {
@@ -69,7 +137,7 @@ class Canvas {
 
     const objects = this.store.getObjects();
     for (const object of objects) {
-      if (this.isPointInObject(x, y, object)) {
+      if (renderer.isPointInShape(x, y, object)) {
         this.store.selectObject(object);
         break;
       }
@@ -90,20 +158,6 @@ class Canvas {
     this.scheduleRender();
   }
 
-  isPointInObject(x, y, object) {
-    const { type, properties } = object;
-    const { x: objX, y: objY, width, height, radius } = properties;
-
-    if (type === "rectangle") {
-      return x >= objX && x <= objX + width && y >= objY && y <= objY + height;
-    } else if (type === "circle") {
-      const dx = x - objX;
-      const dy = y - objY;
-      return dx * dx + dy * dy <= radius * radius;
-    }
-    return false;
-  }
-
   scheduleRender() {
     if (!this.renderScheduled) {
       this.renderScheduled = true;
@@ -121,30 +175,28 @@ class Canvas {
     const objects = this.store.getObjects();
     const selectedObject = this.store.getSelectedObject();
     objects.forEach((object) => {
-      renderer(this.context, object);
+      renderer.drawShape(this.context, object);
       if (selectedObject && object.id === selectedObject.id) {
-        this.drawOutline(object);
+        renderer.drawOutline(this.context, object);
       }
     });
+    if (this.newShapePlaceholder) {
+      this.drawNewShape(this.newShapePlaceholder);
+    }
     this.context.restore();
   }
 
-  drawOutline(object) {
-    const { x, y, width, height, radius } = object.properties;
-    this.context.strokeStyle = "purple";
-    this.context.lineWidth = 4;
-
-    if (object.type === "rectangle") {
-      this.context.strokeRect(x, y, width, height);
-    } else if (object.type === "circle") {
-      this.context.beginPath();
-      this.context.arc(x, y, radius, 0, Math.PI * 2);
-      this.context.stroke();
-    }
+  drawNewShape({ x, y, width, height }) {
+    this.context.strokeStyle = "lightblue";
+    this.context.lineWidth = 1;
+    this.context.strokeRect(x, y, width, height);
   }
 
   clear() {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+  setCursor(cursorType) {
+    this.canvas.style.cursor = cursorType;
   }
 
   exportAsPNG() {

@@ -27,10 +27,6 @@ class App {
   }
 
   setupEventListeners() {
-    document.getElementById("add-shape").addEventListener("click", () => {
-      const shapeType = prompt("Enter shape type (rect, circle, text):");
-      this.store.addShape(shapeType);
-    });
     document.getElementById("remove-shape").addEventListener("click", () => {
       const selectedObject = this.store.getSelectedObject();
       if (selectedObject) {

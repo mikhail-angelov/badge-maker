@@ -3,7 +3,6 @@ class PropertiesPanel {
     this.store = store;
     this.container = container;
     this.tempProperties = {};
-
     this.store.subscribe(this.render.bind(this));
   }
 
@@ -17,7 +16,6 @@ class PropertiesPanel {
       for (const [key, value] of Object.entries(this.tempProperties)) {
         const isNumber = typeof value === "number";
         const propertyElement = document.createElement("div");
-        console.log("3", key, value, typeof value);
         propertyElement.innerHTML = `
             <label>${key}</label>
             <input type="text" value="${value}" type=${

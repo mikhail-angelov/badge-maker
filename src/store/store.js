@@ -1,6 +1,12 @@
-import { Rectangle, Circle, Text } from "./shapes.js";
 import IndexedDBHelper from "./indexedDBHelper.js";
 
+class Shape {
+  constructor(id, type, properties) {
+    this.id = id;
+    this.type = type;
+    this.properties = properties;
+  }
+}
 class Store {
   constructor() {
     this.objects = [];
@@ -55,31 +61,59 @@ class Store {
     this.listeners.forEach((listener) => listener(this.objects));
   }
 
-  addShape(type) {
+  addShape(type, properties) {
     let shape;
     const id = Date.now();
 
     switch (type) {
-      case "rect":
-        shape = new Rectangle(id, {
+      case "rectangle":
+        shape = new Shape(id, "rectangle", {
           x: 240,
           y: 240,
           width: 100,
           height: 100,
           color: "blue",
+          ...properties,
+        });
+        break;
+      case "image":
+        shape = new Shape(id, "image", {
+          x: 240,
+          y: 240,
+          width: 100,
+          height: 100,
+          ...properties,
         });
         break;
       case "circle":
-        shape = new Circle(id, { x: 200, y: 200, radius: 50, color: "red" });
+        shape = new Shape(id, "circle", {
+          x: 200,
+          y: 200,
+          radius: 50,
+          color: "red",
+          ...properties,
+        });
         break;
       case "text":
-        shape = new Text(id, {
+        shape = new Shape(id, "text", {
           x: 200,
           y: 200,
           text: "test",
           fontFamily: "Arial",
           fontSize: "18pt",
           color: "black",
+          ...properties,
+        });
+        break;
+      case "circle-text":
+        shape = new Shape(id, "circle-text", {
+          x: 200,
+          y: 200,
+          text: "test",
+          fontFamily: "Arial",
+          fontSize: "18pt",
+          color: "black",
+          ...properties,
         });
         break;
       default:
@@ -87,6 +121,7 @@ class Store {
     }
 
     this.objects = [...this.objects, shape];
+    this.selectedObject = shape;
     this.history.push({ action: "add", items: this.objects });
     this.saveObject(shape);
     this.notify();
@@ -114,6 +149,7 @@ class Store {
 
   selectObject(object) {
     this.selectedObject = object;
+    console.log("selectedObject", this.selectedObject);
     this.notify();
   }
 

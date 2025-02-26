@@ -22,18 +22,41 @@ html {
   background-color: #f0f0f0;
   border-right: 1px solid #ccc;
 }
+#object-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#object-items li {
+  padding: 4px;
+  cursor: pointer;
+}
+#object-items li.selected {
+    background-color: #e0e0e0;
+}
+#object-items li:hover {
+  background-color: #e0e0e0;
+}
 
 #canvas-container {
   width: 60%;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
   background-color: #fff;
+}
+#tool-panel {
+  display: flex;
+  margin-bottom: 10px;
+}
+#tool-panel .tool-button {
+  margin-right: 10px;
+}
+#tool-panel #load-image {
+  margin-right: 10px;
 }
 
 #canvas {
   border: 1px solid #000;
-  cursor: crosshair;
 }
 
 #properties-panel {
