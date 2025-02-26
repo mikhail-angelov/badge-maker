@@ -2,34 +2,44 @@ class PropertiesPanel {
   constructor(container, store) {
     this.store = store;
     this.container = container;
-    
-    this.store.subscribe(() => {
-      this.render();
-    });
+    this.tempProperties = {};
+
+    this.store.subscribe(this.render.bind(this));
   }
 
   render() {
     const propertiesDiv = this.container.querySelector("#properties");
     propertiesDiv.innerHTML = "";
     const selectedObject = this.store.getSelectedObject();
-
     if (selectedObject) {
-      for (const [key, value] of Object.entries(selectedObject.properties)) {
+      this.tempProperties = { ...selectedObject.properties };
+
+      for (const [key, value] of Object.entries(this.tempProperties)) {
+        const isNumber = typeof value === "number";
         const propertyElement = document.createElement("div");
+        console.log("3", key, value, typeof value);
         propertyElement.innerHTML = `
-                    <label>${key}</label>
-                    <input type="text" value="${value}" data-key="${key}" />
-                `;
+            <label>${key}</label>
+            <input type="text" value="${value}" type=${
+          isNumber ? "number" : "text"
+        } data-key="${key}" />
+          `;
         propertyElement
           .querySelector("input")
           .addEventListener("input", (event) => {
-            this.store.updateProps(selectedObject.id, {
-              ...selectedObject.properties,
-              [key]: event.target.value,
-            });
+            this.tempProperties[key] = isNumber
+              ? +event.target.value
+              : event.target.value;
           });
         propertiesDiv.appendChild(propertyElement);
       }
+
+      const applyButton = document.createElement("button");
+      applyButton.textContent = "Apply";
+      applyButton.addEventListener("click", () => {
+        this.store.updateProps(selectedObject.id, this.tempProperties);
+      });
+      propertiesDiv.appendChild(applyButton);
     }
   }
 }

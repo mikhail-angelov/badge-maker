@@ -1,28 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Badge Maker</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
     <div class="main">
-        <div class="column" id="object-list">
-            <h2>3D Badge maker</h2>
-            <button id="add-shape">+ Add</button>
-            <ul id="object-items"></ul>
-        </div>
-        <div class="column" id="canvas-container">
-            <canvas id="canvas" width="800" height="600"></canvas>
-        </div>
-        <div class="column" id="properties-panel">
-            <h2>Properties</h2>
-            <button id="remove-shape">Remove</button>
-            <button id="export-png">Export png</button>
-            <div id="properties"></div>
-        </div>
+      <div class="column" id="object-list">
+        <h2>3D Badge maker</h2>
+        <button id="add-shape">+ Add</button>
+        <ul id="object-items"></ul>
+      </div>
+      <div class="column" id="canvas-container">
+        <canvas id="canvas" width="800" height="600"></canvas>
+      </div>
+      <div class="column" id="properties-panel">
+        <h2>Properties</h2>
+        <button id="remove-shape">Remove</button>
+        <button id="export-png">Export png</button>
+        <div id="properties"></div>
+      </div>
     </div>
+    <div id="footer"></div>
     <script type="module" src="app.js"></script>
-</body>
+  </body>
 </html>

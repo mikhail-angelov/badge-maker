@@ -46,17 +46,18 @@ class Canvas {
       const rect = this.canvas.getBoundingClientRect();
       const x = (event.clientX - rect.left) / this.scale;
       const y = (event.clientY - rect.top) / this.scale;
-      const { id, properties } = this.draggedObject;
 
-      this.store.updateProps(id, {
-        ...properties,
-        x: x - this.offsetX,
-        y: y - this.offsetY,
-      });
+      this.draggedObject.properties.x = x - this.offsetX;
+      this.draggedObject.properties.y = y - this.offsetY;
+      this.scheduleRender();
     }
   }
 
   handleMouseUp() {
+    if (this.isDragging && this.draggedObject) {
+      const { id, properties } = this.draggedObject;
+      this.store.updateProps(id, properties);
+    }
     this.isDragging = false;
     this.draggedObject = null;
   }

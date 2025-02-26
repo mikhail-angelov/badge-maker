@@ -1,50 +1,68 @@
-body {
-    display: flex;
-    height: 100vh;
-    margin: 0;
+body,
+html {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .main {
-    display: flex;
-    width: 100%;
-    height: 100vh;
+  flex: 1;
+  display: flex;
 }
 
 .column {
-    padding: 10px;
-    overflow-y: auto;
+  flex: 1;
+  padding: 10px;
 }
 
 #object-list {
-    width: 20%;
-    background-color: #f0f0f0;
-    border-right: 1px solid #ccc;
+  width: 20%;
+  background-color: #f0f0f0;
+  border-right: 1px solid #ccc;
 }
 
 #canvas-container {
-    width: 60%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #fff;
+  width: 60%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #fff;
 }
 
 #canvas {
-    border: 1px solid #000;
-    cursor: crosshair;
+  border: 1px solid #000;
+  cursor: crosshair;
 }
 
 #properties-panel {
-    width: 20%;
-    background-color: #f0f0f0;
-    border-left: 1px solid #ccc;
+  width: 20%;
+  background-color: #f0f0f0;
+  border-left: 1px solid #ccc;
+}
+#properties-panel input[type="text"],
+input[type="number"] {
+  width: 100%;
+  margin-bottom: 10px;
 }
 
-button {
-    margin-top: 10px;
+#footer {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  background-color: #f1f1f1;
+  border-top: 1px solid #ccc;
 }
 
-input[type="text"], input[type="number"] {
-    width: 100%;
-    margin-bottom: 10px;
+.history-square {
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  background-color: #ccc;
+  cursor: pointer;
+}
+
+.history-square:hover {
+  background-color: #aaa;
 }
