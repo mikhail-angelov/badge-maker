@@ -82,8 +82,20 @@ input[type="number"] {
   width: 20px;
   height: 20px;
   margin: 2px;
-  background-color: #ccc;
+  border: 1px solid #ccc;
   cursor: pointer;
+}
+.history-square.forward {
+  background-color: white !important;
+}
+.history-square.add {
+  background-color: #0f0;
+}
+.history-square.update {
+  background-color: #ccc;
+}
+.history-square.remove {
+  background-color: #f00;
 }
 
 .history-square:hover {

@@ -9,15 +9,20 @@ class Footer {
   render() {
     this.container.innerHTML = "";
     const history = this.store.getHistory();
+    const historyIndex = this.store.getHistoryIndex();
     const recentHistory = history.slice(-20);
 
     recentHistory.forEach((entry, index) => {
       const square = document.createElement("div");
-      square.className = "history-square";
+      square.className = `history-square ${entry.action} ${
+        index > historyIndex ? "forward" : ""
+      }`;
       square.title = `Action: ${entry.action}`;
       square.addEventListener("click", () => {
-        console.log("restore", history.length - 2 + index);
-        this.store.restoreFromHistory(history.length - 2 + index);
+        const effectiveIndex =
+          history.length > 20 ? history.length - 20 + index : index;
+        console.log("restore", effectiveIndex);
+        this.store.restoreFromHistory(effectiveIndex);
       });
       this.container.appendChild(square);
     });

@@ -12,6 +12,7 @@ class Store {
     this.objects = [];
     this.listeners = [];
     this.history = [];
+    this.historyIndex = -1;
     this.selectedObject = null;
     this.dbHelper = new IndexedDBHelper("BadgeMakerDB", "objects");
 
@@ -22,6 +23,16 @@ class Store {
     try {
       await this.dbHelper.initDB();
       this.objects = await this.dbHelper.loadObjects();
+      //load images
+      this.objects = this.objects.map((item) => {
+        if (item.type === "image") {
+          const image = new Image();
+          image.src = item.properties.imageSrc;
+          item.image = image;
+        }
+        return item;
+      });
+      this.pushToHistory("update");
       this.notify();
     } catch (error) {
       console.error("Error initializing database:", error);
@@ -30,7 +41,12 @@ class Store {
 
   async saveObject(object) {
     try {
-      await this.dbHelper.saveObject(object);
+      if (object.type === "image") {
+        const { image, ...rest } = object;
+        await this.dbHelper.saveObject({ ...rest });
+      } else {
+        await this.dbHelper.saveObject(object);
+      }
     } catch (error) {
       console.error(`Error saving object with id ${object.id}:`, error);
     }
@@ -84,6 +100,10 @@ class Store {
           height: 100,
           ...properties,
         });
+        const image = new Image();
+        image.src = item.properties.imageSrc;
+        shape.image = image;
+
         break;
       case "circle":
         shape = new Shape(id, "circle", {
@@ -122,16 +142,16 @@ class Store {
 
     this.objects = [...this.objects, shape];
     this.selectedObject = shape;
-    this.history.push({ action: "add", items: this.objects });
     this.saveObject(shape);
+    this.pushToHistory("add");
     this.notify();
   }
 
   removeObject(objectId) {
     this.objects = this.objects.filter((obj) => obj.id !== objectId);
-    this.history.push({ action: "remove", items: this.objects });
     this.deleteObject(objectId);
     this.selectedObject = null;
+    this.pushToHistory("remove");
     this.notify();
   }
 
@@ -143,7 +163,7 @@ class Store {
     );
     this.selectedObject = this.objects.find((obj) => obj.id === id);
     this.saveObject(this.selectedObject);
-    this.history.push({ action: "update", items: this.objects });
+    this.pushToHistory("update");
     this.notify();
   }
 
@@ -153,8 +173,13 @@ class Store {
     this.notify();
   }
 
+  pushToHistory(action) {
+    this.history.push({ action, items: [...this.objects] });
+    this.historyIndex = this.history.length - 1;
+  }
   restoreFromHistory(index) {
     if (index >= 0 && index < this.history.length) {
+      this.historyIndex = index;
       this.objects = this.history[index].items;
       this.selectedObject = null;
       this.saveAllObjects();
@@ -172,6 +197,9 @@ class Store {
 
   getHistory() {
     return this.history;
+  }
+  getHistoryIndex() {
+    return this.historyIndex;
   }
 }
 

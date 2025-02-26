@@ -20,12 +20,8 @@ const drawShape = (context, shape) => {
         break;
       }
       case "image": {
-        const { x, y, width, height, imageSrc } = properties;
-        const image = new Image();
-        image.onload = function() {
-          context.drawImage(image, x, y, width, height);
-        };
-        image.src = imageSrc;
+        const { x, y, width, height } = properties;
+        context.drawImage(shape.image, x, y, width, height);
         break;
       }
       case "text": {

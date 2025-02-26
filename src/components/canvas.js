@@ -86,7 +86,13 @@ class Canvas {
       for (const object of objects) {
         if (renderer.isPointInShape(x, y, object)) {
           this.isDragging = true;
-          this.draggedObject = object;
+          if (object.type === "image") {
+            const { image, ...rest } = object;
+            this.draggedObject = structuredClone({ ...rest });
+            this.draggedObject.image = image;
+          } else {
+            this.draggedObject = structuredClone(object);
+          }
           this.offsetX = x - object.properties.x;
           this.offsetY = y - object.properties.y;
           this.store.selectObject(object);
@@ -175,9 +181,16 @@ class Canvas {
     const objects = this.store.getObjects();
     const selectedObject = this.store.getSelectedObject();
     objects.forEach((object) => {
-      renderer.drawShape(this.context, object);
       if (selectedObject && object.id === selectedObject.id) {
-        renderer.drawOutline(this.context, object);
+        if (this.draggedObject) {
+          renderer.drawShape(this.context, this.draggedObject);
+          renderer.drawOutline(this.context, this.draggedObject);
+        } else {
+          renderer.drawShape(this.context, object);
+          renderer.drawOutline(this.context, object);
+        }
+      } else {
+        renderer.drawShape(this.context, object);
       }
     });
     if (this.newShapePlaceholder) {
