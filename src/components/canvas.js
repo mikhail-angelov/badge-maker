@@ -25,11 +25,16 @@ class Canvas {
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Delete") {
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
         const selectedObject = this.store.getSelectedObject();
         if (selectedObject) {
           this.store.removeObject(selectedObject.id);
         }
+      } else if (event.key === "Escape") {
+        this.newShapePlaceholder = null;
+        this.draggedObject = null;
+        this.setCursor("default");
       }
     });
     document.querySelectorAll(".tool-button").forEach((button) => {
@@ -72,10 +77,20 @@ class Canvas {
       });
   }
 
-  handleMouseDown(event) {
+  getMousePosition(event) {
     const rect = this.canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / this.scale;
-    const y = (event.clientY - rect.top) / this.scale;
+    return {
+      x:
+        ((event.clientX - rect.left) * (this.canvas.width / rect.width)) /
+        this.scale,
+      y:
+        ((event.clientY - rect.top) * (this.canvas.height / rect.height)) /
+        this.scale,
+    };
+  }
+
+  handleMouseDown(event) {
+    const { x, y } = this.getMousePosition(event);
 
     if (this.newShapePlaceholder) {
       this.isDragging = true;
@@ -107,9 +122,8 @@ class Canvas {
     if (!this.isDragging) {
       return;
     }
-    const rect = this.canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / this.scale;
-    const y = (event.clientY - rect.top) / this.scale;
+    const { x, y } = this.getMousePosition(event);
+
     if (this.newShapePlaceholder) {
       this.newShapePlaceholder.width = x - this.newShapePlaceholder.x;
       this.newShapePlaceholder.height = y - this.newShapePlaceholder.y;
@@ -137,10 +151,7 @@ class Canvas {
   }
 
   handleCanvasClick(event) {
-    const rect = this.canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / this.scale;
-    const y = (event.clientY - rect.top) / this.scale;
-
+    const { x, y } = this.getMousePosition(event);
     const objects = this.store.getObjects();
     for (const object of objects) {
       if (renderer.isPointInShape(x, y, object)) {
@@ -181,16 +192,14 @@ class Canvas {
     const objects = this.store.getObjects();
     const selectedObject = this.store.getSelectedObject();
     objects.forEach((object) => {
-      if (selectedObject && object.id === selectedObject.id) {
-        if (this.draggedObject) {
-          renderer.drawShape(this.context, this.draggedObject);
-          renderer.drawOutline(this.context, this.draggedObject);
-        } else {
-          renderer.drawShape(this.context, object);
-          renderer.drawOutline(this.context, object);
-        }
-      } else {
-        renderer.drawShape(this.context, object);
+      const drawOutline = object.id === selectedObject?.id;
+      let effectiveObject = object;
+      if (drawOutline && this.draggedObject) {
+        effectiveObject = this.draggedObject;
+      }
+      renderer.drawShape(this.context, effectiveObject);
+      if (drawOutline) {
+        renderer.drawOutline(this.context, effectiveObject);
       }
     });
     if (this.newShapePlaceholder) {

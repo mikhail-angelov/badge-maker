@@ -3,7 +3,7 @@
 const drawShape = (context, shape) => {
   try {
     const { type, properties } = shape;
-    context.setTransform(1, 0, 0, 1, 0, 0); // Reset transformation matrix to the identity matrix
+    context.save();
     switch (type) {
       case "rectangle": {
         const { x, y, width, height, color } = properties;
@@ -124,6 +124,7 @@ const drawShape = (context, shape) => {
         console.log("Unknown shape type", shape);
         break;
     }
+    context.restore();
   } catch (e) {
     console.log("Error drawing shape", shape, e);
   }
@@ -132,7 +133,7 @@ const drawShape = (context, shape) => {
 const drawOutline = (context, shape) => {
   let x, y, width, height;
   try {
-    context.setTransform(1, 0, 0, 1, 0, 0); // Reset transformation matrix to the identity matrix
+    context.save();
     if (shape.type === "rectangle" || shape.type === "image") {
       x = shape.properties.x;
       y = shape.properties.y;
@@ -160,12 +161,14 @@ const drawOutline = (context, shape) => {
     context.strokeStyle = "purple";
     context.lineWidth = 4;
     context.strokeRect(x, y, width, height);
+    context.restore();
   } catch (e) {
     console.log("Error drawing outline", shape, e);
   }
 };
 
 const isPointInShape = (x, y, shape) =>{
+  if(!shape) return false;
   const { type, properties } = shape;
   const { x: objX, y: objY, width, height, radius } = properties;
 
@@ -176,7 +179,6 @@ const isPointInShape = (x, y, shape) =>{
   } else {
     return x >= objX && x <= objX + width && y >= objY && y <= objY + height;
   } 
-  // return false;
 }
 
 export default { drawShape, drawOutline, isPointInShape };
