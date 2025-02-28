@@ -120,8 +120,9 @@ class Store {
           y: 200,
           text: "test",
           fontFamily: "Arial",
-          fontSize: "18pt",
+          fontSize: "18",
           color: "black",
+          rotation: 0,
           ...properties,
         });
         break;
@@ -131,8 +132,11 @@ class Store {
           y: 200,
           text: "test",
           fontFamily: "Arial",
-          fontSize: "18pt",
+          fontSize: "18",
           color: "black",
+          radius: Math.max(properties.width, properties.height) / 2,
+          startAngle: 0,
+          kerning: 0,
           ...properties,
         });
         break;

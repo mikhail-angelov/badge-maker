@@ -25,7 +25,7 @@ class Canvas {
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Delete" || event.key === "Backspace") {
+      if (event.key === "Delete" ) {
         event.preventDefault();
         const selectedObject = this.store.getSelectedObject();
         if (selectedObject) {

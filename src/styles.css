@@ -57,6 +57,7 @@ html {
 
 #canvas {
   border: 1px solid #000;
+  flex: 1;
 }
 
 #properties-panel {
