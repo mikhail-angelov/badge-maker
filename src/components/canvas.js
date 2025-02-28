@@ -10,6 +10,7 @@ class Canvas {
     this.canvas.height = 600;
 
     this.isDragging = false;
+    this.isSizing = "";
     this.draggedObject = null;
     this.offsetX = 0;
     this.offsetY = 0;
@@ -25,11 +26,13 @@ class Canvas {
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Delete" ) {
+      if (
+        event.ctrlKey &&
+        (event.key === "Delete" || event.key === "Backspace")
+      ) {
         event.preventDefault();
-        const selectedObject = this.store.getSelectedObject();
-        if (selectedObject) {
-          this.store.removeObject(selectedObject.id);
+        if (this.draggedObject) {
+          this.store.removeObject(this.draggedObject.id);
         }
       } else if (event.key === "Escape") {
         this.newShapePlaceholder = null;
@@ -101,25 +104,23 @@ class Canvas {
       for (const object of objects) {
         if (renderer.isPointInShape(x, y, object)) {
           this.isDragging = true;
-          if (object.type === "image") {
-            const { image, ...rest } = object;
-            this.draggedObject = structuredClone({ ...rest });
-            this.draggedObject.image = image;
-          } else {
-            this.draggedObject = structuredClone(object);
-          }
+          const { id, type, properties, ...rest } = object;
+          this.draggedObject = structuredClone({ id, type, properties });
+          this.draggedObject = Object.assign(this.draggedObject, rest);
           this.offsetX = x - object.properties.x;
           this.offsetY = y - object.properties.y;
           this.store.selectObject(object);
           this.setCursor("grabbing");
           break;
+        } else if (renderer.isPointInShapeSpot(x, y, object)) {
+          this.isSizing = renderer.isPointInShapeSpot(x, y, object);
         }
       }
     }
   }
 
   handleMouseMove(event) {
-    if (!this.isDragging) {
+    if (!this.draggedObject && !this.newShapePlaceholder) {
       return;
     }
     const { x, y } = this.getMousePosition(event);
@@ -128,8 +129,20 @@ class Canvas {
       this.newShapePlaceholder.width = x - this.newShapePlaceholder.x;
       this.newShapePlaceholder.height = y - this.newShapePlaceholder.y;
     } else if (this.draggedObject) {
-      this.draggedObject.properties.x = x - this.offsetX;
-      this.draggedObject.properties.y = y - this.offsetY;
+      if (this.isDragging) {
+        this.draggedObject.properties.x = x - this.offsetX;
+        this.draggedObject.properties.y = y - this.offsetY;
+      } else if (this.isSizing) {
+        renderer.updateShapeOnMouseEvent(this.draggedObject, this.isSizing, {
+          x,
+          y,
+        });
+      } else {
+        const spot = renderer.isPointInShapeSpot(x, y, this.draggedObject);
+        if (spot) {
+          this.setCursor(`${spot}-resize`);
+        }
+      }
     }
     this.scheduleRender();
   }
@@ -140,13 +153,13 @@ class Canvas {
         ...this.newShapePlaceholder,
         color: this.selectedColor,
       });
-    } else if (this.isDragging && this.draggedObject) {
+    } else if ((this.isDragging || this.isSizing) && this.draggedObject) {
       const { id, properties } = this.draggedObject;
       this.store.updateProps(id, properties);
     }
     this.setCursor("default");
     this.isDragging = false;
-    this.draggedObject = null;
+    this.isSizing = "";
     this.newShapePlaceholder = null;
   }
 
@@ -190,18 +203,15 @@ class Canvas {
     this.context.save();
     this.context.scale(this.scale, this.scale);
     const objects = this.store.getObjects();
-    const selectedObject = this.store.getSelectedObject();
     objects.forEach((object) => {
-      const drawOutline = object.id === selectedObject?.id;
-      let effectiveObject = object;
-      if (drawOutline && this.draggedObject) {
-        effectiveObject = this.draggedObject;
-      }
-      renderer.drawShape(this.context, effectiveObject);
-      if (drawOutline) {
-        renderer.drawOutline(this.context, effectiveObject);
+      if (object.id !== this.draggedObject?.id) {
+        renderer.drawShape(this.context, object);
       }
     });
+    if (this.draggedObject) {
+      renderer.drawShape(this.context, this.draggedObject);
+      renderer.drawOutline(this.context, this.draggedObject, this.scale);
+    }
     if (this.newShapePlaceholder) {
       this.drawNewShape(this.newShapePlaceholder);
     }

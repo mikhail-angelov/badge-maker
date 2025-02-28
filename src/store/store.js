@@ -57,7 +57,7 @@ class Store {
         this.objects.map((item) => this.dbHelper.saveObject(item))
       );
     } catch (error) {
-      console.error(`Error saving object with id ${object.id}:`, error);
+      console.error(`Error saving all objects:`, error);
     }
   }
 
@@ -100,44 +100,41 @@ class Store {
           height: 100,
           ...properties,
         });
+        //load image
         const image = new Image();
-        image.src = item.properties.imageSrc;
+        image.src = shape.properties.imageSrc;
         shape.image = image;
-
         break;
       case "circle":
         shape = new Shape(id, "circle", {
-          x: 200,
-          y: 200,
-          radius: 50,
-          color: "red",
-          ...properties,
+          x: properties.x + properties.width / 2,
+          y: properties.y + properties.height / 2,
+          radius: Math.min(properties.width, properties.height) / 2,
+          color: properties.color || "red",
         });
         break;
       case "text":
         shape = new Shape(id, "text", {
-          x: 200,
-          y: 200,
-          text: "test",
+          x: properties.x,
+          y: properties.y,
+          text: "lorem ipsum",
           fontFamily: "Arial",
-          fontSize: "18",
-          color: "black",
+          fontSize: 18,
+          color: properties.color || "black",
           rotation: 0,
-          ...properties,
         });
         break;
       case "circle-text":
         shape = new Shape(id, "circle-text", {
-          x: 200,
-          y: 200,
-          text: "test",
+          x: properties.x + properties.width / 2,
+          y: properties.y + properties.height / 2,
+          radius: Math.min(properties.width, properties.height) / 2,
+          color: properties.color || "red",
+          text: "lorem ipsum",
           fontFamily: "Arial",
-          fontSize: "18",
-          color: "black",
-          radius: Math.max(properties.width, properties.height) / 2,
+          fontSize: 18,
           startAngle: 0,
           kerning: 0,
-          ...properties,
         });
         break;
       default:

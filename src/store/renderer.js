@@ -52,14 +52,22 @@ const renderText = (context, shape) => {
 };
 
 const renderCircleText = (context, shape) => {
-  let { x, y, text, fontSize, fontFamily, color, radius, startAngle=0, kerning=0 } = shape.properties;
+  let {
+    x,
+    y,
+    text,
+    fontSize,
+    fontFamily,
+    color,
+    radius,
+    startAngle = 0,
+    kerning = 0,
+  } = shape.properties;
   let align = "center";
   let textInside = true;
   let inwardFacing = true;
-  
 
-  // var mainCanvas = document.createElement('canvas');
-  var clockwise = align == "right" ? 1 : -1; // draw clockwise for aligned right. Else Anticlockwise
+  const clockwise = align == "right" ? 1 : -1; // draw clockwise for aligned right. Else Anticlockwise
   startAngle = startAngle * (Math.PI / 180); // convert to radians
 
   // calculate height of the font. Many ways to do this
@@ -71,16 +79,11 @@ const renderCircleText = (context, shape) => {
 
   // in cases where we are drawing outside radius,
   // expand radius to handle it
-
   if (!textInside) radius += textHeight;
 
-  // mainCanvas.width = diameter;
-  // mainCanvas.height = diameter;
-  // // omit next line for transparent background
-  // mainCanvas.style.backgroundColor = 'lightgray';
+  context.save(); // Save the current context state
   context.fillStyle = color || "black";
   context.font = fontSize + "pt " + fontFamily;
-
 
   // Reverse letters for align Left inward, align right outward
   // and align center inward.
@@ -91,15 +94,15 @@ const renderCircleText = (context, shape) => {
     text = text.split("").reverse().join("");
 
   // Setup letters and positioning
-  context.translate(radius, radius); // Move to center
+  context.translate(x, y); // Move to the specified x, y position
   startAngle += Math.PI * !inwardFacing; // Rotate 180 if outward
   context.textBaseline = "middle"; // Ensure we draw in exact center
   context.textAlign = "center"; // Ensure we draw in exact center
 
   // rotate 50% of total angle for center alignment
   if (align == "center") {
-    for (var j = 0; j < text.length; j++) {
-      var charWid = context.measureText(text[j]).width;
+    for (let j = 0; j < text.length; j++) {
+      const charWid = context.measureText(text[j]).width;
       startAngle +=
         ((charWid + (j == text.length - 1 ? 0 : kerning)) /
           (radius - textHeight) /
@@ -112,8 +115,8 @@ const renderCircleText = (context, shape) => {
   context.rotate(startAngle);
 
   // Now for the fun bit: draw, rotate, and repeat
-  for (var j = 0; j < text.length; j++) {
-    var charWid = context.measureText(text[j]).width; // half letter
+  for (let j = 0; j < text.length; j++) {
+    const charWid = context.measureText(text[j]).width; // half letter
     // rotate half letter
     context.rotate((charWid / 2 / (radius - textHeight)) * clockwise);
     // draw the character at "top" or "bottom"
@@ -128,21 +131,66 @@ const renderCircleText = (context, shape) => {
       ((charWid / 2 + kerning) / (radius - textHeight)) * clockwise
     ); // rotate half letter
   }
+
+  context.restore(); // Restore the context to its original state
 };
 
-const renderRectOutline = (context, shape) => {
-  const x = shape.properties.x - RECT_OUTLINE_PADDING;
-  const y = shape.properties.y - RECT_OUTLINE_PADDING;
-  const width = shape.properties.width + RECT_OUTLINE_PADDING * 2;
-  const height = shape.properties.height + RECT_OUTLINE_PADDING * 2;
-  context.strokeStyle = "purple";
+const renderOutline = (context, rect) => {
+  const { x, y, width, height } = rect;
+  const cornerSize = 8; // Size of the corner squares
+
+  // Save the current context state
+  context.save();
+
+  // Reset the scale to 1 for drawing the outline
+  context.setTransform(1, 0, 0, 1, 0, 0);
+
+  // Draw the light blue outline
+  context.strokeStyle = "lightblue";
   context.lineWidth = 1;
   context.strokeRect(x, y, width, height);
+
+  // Draw small squares on each corner
+  context.fillStyle = "lightblue";
+  context.strokeRect(
+    x - cornerSize / 2,
+    y - cornerSize / 2,
+    cornerSize,
+    cornerSize
+  ); // Top-left corner
+  context.strokeRect(
+    x + width - cornerSize / 2,
+    y - cornerSize / 2,
+    cornerSize,
+    cornerSize
+  ); // Top-right corner
+  context.strokeRect(
+    x - cornerSize / 2,
+    y + height - cornerSize / 2,
+    cornerSize,
+    cornerSize
+  ); // Bottom-left corner
+  context.strokeRect(
+    x + width - cornerSize / 2,
+    y + height - cornerSize / 2,
+    cornerSize,
+    cornerSize
+  ); // Bottom-right corner
+
+  // Restore the context to its original state
+  context.restore();
+};
+const renderRectOutline = (context, shape, scale) => {
+  const x = (shape.properties.x - RECT_OUTLINE_PADDING) * scale;
+  const y = (shape.properties.y - RECT_OUTLINE_PADDING) * scale;
+  const width = (shape.properties.width + RECT_OUTLINE_PADDING * 2) * scale;
+  const height = (shape.properties.height + RECT_OUTLINE_PADDING * 2) * scale;
+  renderOutline(context, { x, y, width, height });
 };
 
-const renderTextOutline = (context, shape) => {
+const renderTextOutline = (context, shape, scale) => {
   const { x, y, width, height } = getTextBox(shape.properties);
-  
+
   if (shape.properties.rotation) {
     const centerX = x + width / 2;
     const centerY = y + TEXT_OUTLINE_PADDING * 2 + height / 2;
@@ -150,19 +198,24 @@ const renderTextOutline = (context, shape) => {
     context.rotate((shape.properties.rotation * Math.PI) / 180);
     context.translate(-centerX, -centerY);
   }
-  context.strokeStyle = "purple";
-  context.lineWidth = 1;
-  context.strokeRect(x, y, width, height);
+  renderOutline(context, {
+    x: x * scale,
+    y: y * scale,
+    width: width * scale,
+    height: height * scale,
+  });
 };
 
-const renderCircleOutline = (context, shape) => {
-  const x = shape.properties.x - shape.properties.radius;
-  const y = shape.properties.y - shape.properties.radius;
-  const width = shape.properties.radius * 2;
-  const height = shape.properties.radius * 2;
-  context.strokeStyle = "purple";
-  context.lineWidth = 1;
-  context.strokeRect(x, y, width, height);
+const renderCircleOutline = (context, shape, scale) => {
+  const { x, y, width, height } = shape.rect
+    ? shape.rect
+    : getCircleBox(shape.properties);
+  renderOutline(context, {
+    x: x * scale,
+    y: y * scale,
+    width: width * scale,
+    height: height * scale,
+  });
 };
 
 const getRectBox = (properties) => {
@@ -190,6 +243,49 @@ const getTextBox = (properties) => {
     height: divForMeasureText.offsetHeight + TEXT_OUTLINE_PADDING * 2,
   };
 };
+//mutate shape
+const updateRectOnEvent = (shape, event, point) => {
+  const { x, y } = point;
+  if (event.includes("n")) {
+    shape.properties.height = shape.properties.y - y + shape.properties.height;
+    shape.properties.y = y;
+  }
+  if (event.includes("s")) {
+    shape.properties.height = y - shape.properties.y;
+  }
+  if (event.includes("w")) {
+    shape.properties.width = shape.properties.x - x + shape.properties.width;
+    shape.properties.x = x;
+  }
+  if (event.includes("e")) {
+    shape.properties.width = x - shape.properties.x;
+  }
+};
+const updateCircleOnEvent = (shape, event, point) => {
+  if (!shape.rect) {
+    const { x, y, width, height } = getCircleBox(shape.properties);
+    shape.rect = { x, y, width, height };
+  }
+  let { x, y, width, height } = shape.rect;
+  if (event.includes("n")) {
+    height = y - point.y + height;
+    y = point.y;
+  }
+  if (event.includes("s")) {
+    height = point.y - y;
+  }
+  if (event.includes("w")) {
+    width = x - point.x + width;
+    x = point.x;
+  }
+  if (event.includes("e")) {
+    width = point.x - x;
+  }
+  shape.rect = { x, y, width, height };
+  shape.properties.x = x + width / 2;
+  shape.properties.y = y + height / 2;
+  shape.properties.radius = Math.abs(Math.min(width, height)) / 2;
+};
 
 const renderMap = {
   ["rectangle"]: renderRect,
@@ -212,6 +308,13 @@ const shapeBoxMap = {
   ["text"]: getTextBox,
   ["circle-text"]: getCircleBox,
 };
+const updateShapeMap = {
+  ["rectangle"]: updateRectOnEvent,
+  ["circle"]: updateCircleOnEvent,
+  ["image"]: updateRectOnEvent,
+  ["text"]: updateRectOnEvent,
+  ["circle-text"]: updateCircleOnEvent,
+};
 
 // draw functions should never throw exceptions. They should log errors and continue.
 const drawShape = (context, shape) => {
@@ -224,11 +327,19 @@ const drawShape = (context, shape) => {
   }
 };
 
-const drawOutline = (context, shape) => {
+const drawOutline = (context, shape, scale) => {
   try {
     context.save();
-    renderOutlineMap[shape.type](context, shape);
+    renderOutlineMap[shape.type](context, shape, scale);
     context.restore();
+  } catch (e) {
+    console.log("Error drawing outline", shape, e);
+  }
+};
+
+const updateShapeOnMouseEvent = (shape, event, point) => {
+  try {
+    updateShapeMap[shape.type](shape, event, point);
   } catch (e) {
     console.log("Error drawing outline", shape, e);
   }
@@ -250,4 +361,53 @@ const isPointInShape = (x, y, shape) => {
   }
 };
 
-export default { drawShape, drawOutline, isPointInShape };
+const isPointInShapeSpot = (x, y, shape) => {
+  if (!shape) return null;
+  try {
+    const {
+      x: objX,
+      y: objY,
+      width,
+      height,
+    } = shape.rect
+      ? shape.rect
+      : shapeBoxMap[shape.type](shape.properties);
+    const cornerSize = 8; // Size of the corner squares
+
+    // Define the spots
+    const spots = {
+      nw: { x: objX - cornerSize / 2, y: objY - cornerSize / 2 },
+      ne: { x: objX + width - cornerSize / 2, y: objY - cornerSize / 2 },
+      sw: { x: objX - cornerSize / 2, y: objY + height - cornerSize / 2 },
+      se: {
+        x: objX + width - cornerSize / 2,
+        y: objY + height - cornerSize / 2,
+      },
+    };
+
+    // Check if the point is inside any of the spots
+    for (const [spot, spotCoords] of Object.entries(spots)) {
+      if (
+        x >= spotCoords.x &&
+        x <= spotCoords.x + cornerSize &&
+        y >= spotCoords.y &&
+        y <= spotCoords.y + cornerSize
+      ) {
+        return spot;
+      }
+    }
+
+    return null;
+  } catch (e) {
+    console.log("Error checking point in shape spot", shape, e);
+    return null;
+  }
+};
+
+export default {
+  drawShape,
+  drawOutline,
+  updateShapeOnMouseEvent,
+  isPointInShape,
+  isPointInShapeSpot,
+};
