@@ -8,9 +8,20 @@
   </head>
   <body>
     <div class="main">
-      <div class="column" id="object-list">
+      <div class="column" id="left-panel">
         <h2>3D Badge maker</h2>
-        <ul id="object-items"></ul>
+        <div class="row">
+          <input
+            type="file"
+            id="json-loader"
+            accept="json/*"
+            style="display: none"
+          />
+          <button id="open-file">Open</button>
+          <button id="save-file">Save</button>
+        </div>
+        <ul id="object-items" class="column"></ul>
+        <button id="clean-canvas">Clean</button>
       </div>
       <div class="column" id="canvas-container">
         <div id="tool-panel">
@@ -20,9 +31,14 @@
           <button class="tool-button" data-shape="circle-text">
             Circle Text
           </button>
-          <input type="file" id="image-loader" accept="image/*" style="display: none;">
+          <input
+            type="file"
+            id="image-loader"
+            accept="image/*"
+            style="display: none"
+          />
           <button id="load-image">Image</button>
-          <input type="color" id="color-picker" value="#000000">
+          <input type="color" id="color-picker" value="#000000" />
         </div>
         <canvas id="canvas" width="800" height="600"></canvas>
       </div>

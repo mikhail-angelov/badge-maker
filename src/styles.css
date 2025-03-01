@@ -13,19 +13,25 @@ html {
 }
 
 .column {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
   padding: 10px;
 }
+.row {
+  display: flex;
+}
 
-#object-list {
+#left-panel {
   width: 20%;
   background-color: #f0f0f0;
   border-right: 1px solid #ccc;
 }
 #object-items {
+  flex: 1;
+  overflow: auto;
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 10px 0;  
 }
 #object-items li {
   padding: 4px;
@@ -37,6 +43,13 @@ html {
 #object-items li:hover {
   background-color: #e0e0e0;
 }
+#save-file{
+  margin-left: 10px;
+}
+#clear-canvas {
+  color: red;
+}
+
 
 #canvas-container {
   width: 60%;

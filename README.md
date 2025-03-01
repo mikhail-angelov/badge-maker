@@ -47,7 +47,7 @@ badge-maker/
 │   │   ├── objectList.js
 │   │   ├── propertiesPanel.js
 │   ├── store/
-│   │   ├── indexedDBHelper.js
+│   │   ├── IndexedDB.js
 │   │   ├── shapes.js
 │   │   ├── store.js
 │   ├── index.html

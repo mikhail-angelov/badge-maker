@@ -1,4 +1,4 @@
-import IndexedDBHelper from "./indexedDBHelper.js";
+import IndexedDB from "./IndexedDB.js";
 
 class Shape {
   constructor(id, type, properties) {
@@ -14,24 +14,16 @@ class Store {
     this.history = [];
     this.historyIndex = -1;
     this.selectedObject = null;
-    this.dbHelper = new IndexedDBHelper("BadgeMakerDB", "objects");
+    this.db = new IndexedDB("BadgeMakerDB", "objects");
 
     this.initDB();
   }
 
   async initDB() {
     try {
-      await this.dbHelper.initDB();
-      this.objects = await this.dbHelper.loadObjects();
-      //load images
-      this.objects = this.objects.map((item) => {
-        if (item.type === "image") {
-          const image = new Image();
-          image.src = item.properties.imageSrc;
-          item.image = image;
-        }
-        return item;
-      });
+      await this.db.initDB();
+      const objects = await this.db.loadObjects();
+      this.objects = this.loadObjects(objects);
       this.pushToHistory("update");
       this.notify();
     } catch (error) {
@@ -39,23 +31,29 @@ class Store {
     }
   }
 
+  loadObjects(objects) {
+    //load images
+    return objects.map((item) => {
+      if (item.type === "image") {
+        const image = new Image();
+        image.src = item.properties.imageSrc;
+        item.image = image;
+      }
+      return item;
+    });
+  }
+
   async saveObject(object) {
     try {
-      if (object.type === "image") {
-        const { image, ...rest } = object;
-        await this.dbHelper.saveObject({ ...rest });
-      } else {
-        await this.dbHelper.saveObject(object);
-      }
+      const { id, type, properties } = object;
+      await this.db.saveObject({ id, type, properties });
     } catch (error) {
       console.error(`Error saving object with id ${object.id}:`, error);
     }
   }
   async saveAllObjects() {
     try {
-      await Promise.all(
-        this.objects.map((item) => this.dbHelper.saveObject(item))
-      );
+      await this.saveObjects(this.objects);
     } catch (error) {
       console.error(`Error saving all objects:`, error);
     }
@@ -63,9 +61,42 @@ class Store {
 
   async deleteObject(id) {
     try {
-      await this.dbHelper.deleteObject(id);
+      await this.db.deleteObject(id);
     } catch (error) {
       console.error(`Error deleting object with id ${id}:`, error);
+    }
+  }
+  removeObject(objectId) {
+    this.objects = this.objects.filter((obj) => obj.id !== objectId);
+    this.deleteObject(objectId);
+    this.selectedObject = null;
+    this.pushToHistory("remove");
+    this.notify();
+  }
+
+  async clearObjects() {
+    try {
+      this.objects = [];
+      this.selectedObject = null;
+      await this.db.deleteAllObjects();
+      this.history = [];
+      this.historyIndex = -1;
+      this.notify();
+    } catch (error) {
+      console.error(`Error clearing all objects:`, error);
+    }
+  }
+
+  async replaceObjects(objects) {
+    try {
+      this.selectedObject = null;
+      await this.db.deleteAllObjects();
+      await this.db.saveObjects(objects);
+      this.objects = this.loadObjects(objects);
+      this.pushToHistory("update");
+      this.notify();
+    } catch (error) {
+      console.error(`Error replacing objects:`, error);
     }
   }
 
@@ -145,14 +176,6 @@ class Store {
     this.selectedObject = shape;
     this.saveObject(shape);
     this.pushToHistory("add");
-    this.notify();
-  }
-
-  removeObject(objectId) {
-    this.objects = this.objects.filter((obj) => obj.id !== objectId);
-    this.deleteObject(objectId);
-    this.selectedObject = null;
-    this.pushToHistory("remove");
     this.notify();
   }
 
