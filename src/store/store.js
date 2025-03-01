@@ -1,3 +1,5 @@
+import shaper from "./shaper.js";
+
 class Shape {
   constructor(id, type, properties) {
     this.id = id;
@@ -108,7 +110,13 @@ class Store {
   }
 
   notify() {
-    this.listeners.forEach((listener) => listener(this.objects));
+    if (this.notifyTimeout) {
+      clearTimeout(this.notifyTimeout);
+    }
+    this.notifyTimeout = setTimeout(() => {
+      this.listeners.forEach((listener) => listener(this.objects));
+      this.notifyTimeout = null;
+    }, 0);
   }
 
   addShape(type, properties) {
@@ -225,6 +233,7 @@ class Store {
   }
 
   setActiveObject(object, offset = {}) {
+    this.cleanAllSelections();
     const { id, type, properties, ...rest } = object;
     const activeObject = structuredClone({ id, type, properties });
     this.activeObject = { ...activeObject, ...rest, ...offset };
@@ -268,32 +277,24 @@ class Store {
     this.notify();
   }
 
-  justify(alignment) {
-    // Implement the logic for justification based on the alignment parameter
-    console.log(`Justify called with alignment: ${alignment}`);
-    // Example logic (you need to implement the actual logic based on your requirements)
-    // this.selectedObjects.forEach((object) => {
-    //   switch (alignment) {
-    //     case "center-horizontal":
-    //       object.properties.x = (this.canvas.width - object.properties.width) / 2;
-    //       break;
-    //     case "center-vertical":
-    //       object.properties.y = (this.canvas.height - object.properties.height) / 2;
-    //       break;
-    //     case "justify-left":
-    //       object.properties.x = 0;
-    //       break;
-    //     case "justify-right":
-    //       object.properties.x = this.canvas.width - object.properties.width;
-    //       break;
-    //     case "justify-top":
-    //       object.properties.y = 0;
-    //       break;
-    //     case "justify-bottom":
-    //       object.properties.y = this.canvas.height - object.properties.height;
-    //       break;
-    //   }
-    // });
+  alignSelectedObjects(alignment) {
+    const selectedObjects = this.objects.filter((object) =>
+      this.selectedObjectsIds.includes(object.id)
+    );
+    const updateObjects = shaper.alignObjects(selectedObjects, alignment);
+    this.objects = this.objects.map((obj) => {
+      const updateObject = updateObjects.find(
+        (updateObj) => updateObj.id === obj.id
+      );
+      if(updateObject){
+        const o = { ...obj, properties: updateObject.properties }
+        this.saveObject(o);
+        return o;
+      }
+      return obj;
+    });
+
+    this.pushToHistory("update");
     this.notify();
   }
 }

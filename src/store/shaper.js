@@ -9,16 +9,41 @@ const TEXT_OUTLINE_PADDING = 5;
 const RECT_OUTLINE_PADDING = 2;
 
 const renderRect = (context, shape) => {
-  const { x, y, width, height, color } = shape.properties;
-  context.fillStyle = color || "black";
-  context.fillRect(x, y, width, height);
+  const {
+    x,
+    y,
+    width,
+    height,
+    color,
+    border = 2,
+    rounded = 0,
+  } = shape.properties;
+  context.strokeStyle = color || "black";
+  context.lineWidth = border;
+  context.beginPath();
+  context.moveTo(x + rounded, y);
+  context.lineTo(x + width - rounded, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + rounded);
+  context.lineTo(x + width, y + height - rounded);
+  context.quadraticCurveTo(
+    x + width,
+    y + height,
+    x + width - rounded,
+    y + height
+  );
+  context.lineTo(x + rounded, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - rounded);
+  context.lineTo(x, y + rounded);
+  context.quadraticCurveTo(x, y, x + rounded, y);
+  context.stroke();
 };
 const renderCircle = (context, shape) => {
-  const { x, y, radius, color } = shape.properties;
-  context.fillStyle = color || "black";
+  const { x, y, radius, border = 2, color } = shape.properties;
+  context.strokeStyle = color || "black";
+  context.lineWidth = border;
   context.beginPath();
   context.arc(x, y, radius, 0, Math.PI * 2);
-  context.fill();
+  context.stroke();
 };
 const renderImage = (context, shape) => {
   const { x, y, width, height } = shape.properties;
@@ -147,7 +172,7 @@ const renderOutline = (context, rect, withoutSpots) => {
   context.setTransform(1, 0, 0, 1, 0, 0);
 
   // Draw the light blue outline
-  context.strokeStyle = withoutSpots?"orange":"lightblue";
+  context.strokeStyle = withoutSpots ? "orange" : "lightblue";
   context.lineWidth = 1;
   context.strokeRect(x, y, width, height);
 
@@ -412,10 +437,102 @@ const isPointInShapeSpot = (x, y, shape) => {
   }
 };
 
+const alignObjects = (objects, alignment) => {
+  // Implement the logic for align based on the alignment parameter
+  console.log(`Align called with alignment: ${alignment}`);
+  if (alignment === "center-horizontal") {
+    // Calculate the average horizontal center x coordinate
+    const totalCenterX = objects.reduce((sum, object) => {
+      const { x, width } = shapeBoxMap[object.type](object.properties);
+      return sum + (x + width / 2);
+    }, 0);
+    const averageCenterX = totalCenterX / objects.length;
+
+    // Apply shift for each shape to make the new center of shapeBox equal to averageCenterX
+    return objects.map((object) => {
+      const { x, width } = shapeBoxMap[object.type](object.properties);
+      const shiftX = averageCenterX - (x + width / 2);
+      object.properties.x += shiftX;
+      return object;
+    });
+  } else if (alignment === "center-vertical") {
+    // Calculate the average vertical center y coordinate
+    const totalCenterY = objects.reduce((sum, object) => {
+      const { y, height } = shapeBoxMap[object.type](object.properties);
+      return sum + (y + height / 2);
+    }, 0);
+    const averageCenterY = totalCenterY / objects.length;
+
+    // Apply shift for each shape to make the new center of shapeBox equal to averageCenterY
+    return objects.map((object) => {
+      const { y, height } = shapeBoxMap[object.type](object.properties);
+      const shiftY = averageCenterY - (y + height / 2);
+      object.properties.y += shiftY;
+      return object;
+    });
+  } else if (alignment === "justify-left") {
+    // Align all shapes to the leftmost x coordinate
+    const leftmostX = Math.min(
+      ...objects.map((object) => shapeBoxMap[object.type](object.properties).x)
+    );
+
+    return objects.map((object) => {
+      const { x } = shapeBoxMap[object.type](object.properties);
+      const shiftX = leftmostX - x;
+      object.properties.x += shiftX;
+      return object;
+    });
+  } else if (alignment === "justify-right") {
+    // Align all shapes to the rightmost x coordinate
+    const rightmostX = Math.max(
+      ...objects.map((object) => {
+        const { x, width } = shapeBoxMap[object.type](object.properties);
+        return x + width;
+      })
+    );
+
+    return objects.map((object) => {
+      const { x, width } = shapeBoxMap[object.type](object.properties);
+      const shiftX = rightmostX - (x + width);
+      object.properties.x += shiftX;
+      return object;
+    });
+  } else if (alignment === "justify-top") {
+    // Align all shapes to the topmost y coordinate
+    const topmostY = Math.min(
+      ...objects.map((object) => shapeBoxMap[object.type](object.properties).y)
+    );
+
+    return objects.map((object) => {
+      const { y } = shapeBoxMap[object.type](object.properties);
+      const shiftY = topmostY - y;
+      object.properties.y += shiftY;
+      return object;
+    });
+  } else if (alignment === "justify-bottom") {
+    // Align all shapes to the bottommost y coordinate
+    const bottommostY = Math.max(
+      ...objects.map((object) => {
+        const { y, height } = shapeBoxMap[object.type](object.properties);
+        return y + height;
+      })
+    );
+
+    return objects.map((object) => {
+      const { y, height } = shapeBoxMap[object.type](object.properties);
+      const shiftY = bottommostY - (y + height);
+      object.properties.y += shiftY;
+      return object;
+    });
+  }
+  return objects;
+};
+
 export default {
   drawShape,
   drawOutline,
   updateShapeOnMouseEvent,
+  alignObjects,
   isPointInShape,
   isPointInShapeSpot,
 };

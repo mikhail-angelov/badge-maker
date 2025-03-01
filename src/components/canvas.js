@@ -109,13 +109,19 @@ class Canvas {
   handleCanvasClick(event) {
     const { x, y } = this.getMousePosition(event);
     const objects = this.store.getObjects();
+    const selectedObjectsIds = this.store.getSelectedObjectIds();
+    let clicked = false;
     for (const object of objects) {
       if (shaper.isPointInShape(x, y, object)) {
         if (event.shiftKey) {
           this.store.toggleObjectSelection(object.id);
         }
+        clicked = true;
         break;
       }
+    }
+    if (!clicked && selectedObjectsIds.length > 0) {
+      this.store.cleanAllSelections();
     }
   }
 

@@ -24,7 +24,7 @@ class PropertiesPanel {
     this.container.querySelectorAll(".justify-button").forEach((button) => {
       button.addEventListener("click", (event) => {
         const alignment = event.target.dataset.align;
-        this.store.justify(alignment);
+        this.store.alignSelectedObjects(alignment);
       });
     });
   }
@@ -46,11 +46,17 @@ class PropertiesPanel {
       const propertyElement = document.createElement("div");
       propertyElement.innerHTML = `
         <label>${key}</label>
-        <input type="${isNumber ? "number" : "text"}" value="${value}" data-key="${key}" />
+        <input type="${
+          isNumber ? "number" : "text"
+        }" value="${value}" data-key="${key}" />
       `;
-      propertyElement.querySelector("input").addEventListener("input", (event) => {
-        this.tempProperties[key] = isNumber ? +event.target.value : event.target.value;
-      });
+      propertyElement
+        .querySelector("input")
+        .addEventListener("input", (event) => {
+          this.tempProperties[key] = isNumber
+            ? +event.target.value
+            : event.target.value;
+        });
       propertiesDiv.appendChild(propertyElement);
     }
 
