@@ -22,10 +22,18 @@ html {
 }
 
 #left-panel {
+  display: flex;
+  flex-direction: column;
   width: 20%;
+  max-width: 250px;
+  padding: 10px;
   background-color: #f0f0f0;
   border-right: 1px solid #ccc;
 }
+h2.title {
+  margin-top: 0;
+}
+
 #object-items {
   flex: 1;
   overflow: auto;
@@ -44,22 +52,24 @@ html {
   background-color: #e0e0e0;
 }
 #save-file{
-  margin-left: 10px;
+  margin: 0 10px;
 }
 #clear-canvas {
   color: red;
 }
 
-
 #canvas-container {
   width: 60%;
+  flex: 1;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background-color: #fff;
 }
 #tool-panel {
   display: flex;
-  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #f0f0f0;
 }
 #tool-panel .tool-button {
   margin-right: 10px;
@@ -73,7 +83,11 @@ html {
 }
 
 #properties-panel {
+  display: flex;
+  flex-direction: column;
   width: 20%;
+  padding: 10px;
+  max-width: 400px;
   background-color: #f0f0f0;
   border-left: 1px solid #ccc;
 }
@@ -86,7 +100,7 @@ input[type="number"] {
 #footer {
   display: flex;
   align-items: center;
-  height: 50px;
+  height: 30px;
   background-color: #f1f1f1;
   border-top: 1px solid #ccc;
 }

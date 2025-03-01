@@ -1,4 +1,4 @@
-import renderer from "../store/renderer.js";
+import shaper from "../store/shaper.js";
 
 class Canvas {
   constructor(canvasElement, store) {
@@ -8,76 +8,17 @@ class Canvas {
     this.context = this.canvas.getContext("2d");
     this.canvas.width = 800;
     this.canvas.height = 600;
+    this.scale = 1;
+    this.renderScheduled = false;
 
     this.isDragging = false;
     this.isSizing = "";
-    this.draggedObject = null;
-    this.offsetX = 0;
-    this.offsetY = 0;
-    this.scale = 1;
-    this.renderScheduled = false;
-    this.newShapePlaceholder = null;
-    this.selectedColor = "#000000";
-    this.imageToLoad = null;
 
     this.canvas.addEventListener("click", this.handleCanvasClick.bind(this));
     this.canvas.addEventListener("mousedown", this.handleMouseDown.bind(this));
     this.canvas.addEventListener("mousemove", this.handleMouseMove.bind(this));
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
-    document.addEventListener("keydown", (event) => {
-      if (
-        event.ctrlKey &&
-        (event.key === "Delete" || event.key === "Backspace")
-      ) {
-        event.preventDefault();
-        if (this.draggedObject) {
-          this.store.removeObject(this.draggedObject.id);
-        }
-      } else if (event.key === "Escape") {
-        this.newShapePlaceholder = null;
-        this.draggedObject = null;
-        this.setCursor("default");
-      }
-    });
-    document.querySelectorAll(".tool-button").forEach((button) => {
-      button.addEventListener("click", (event) => {
-        this.newShapePlaceholder = {
-          type: event.target.dataset.shape,
-        };
-        this.setCursor("crosshair");
-      });
-    });
-    document
-      .getElementById("color-picker")
-      .addEventListener("input", (event) => {
-        this.selectedColor = event.target.value;
-      });
-
-    document.getElementById("load-image").addEventListener("click", () => {
-      document.getElementById("image-loader").click();
-    });
-
-    document
-      .getElementById("image-loader")
-      .addEventListener("change", (event) => {
-        const file = event.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-              this.newShapePlaceholder = {
-                type: "image",
-                imageSrc: img.src,
-              };
-              this.setCursor("crosshair");
-            };
-            img.src = e.target.result;
-          };
-          reader.readAsDataURL(file);
-        }
-      });
   }
 
   getMousePosition(event) {
@@ -94,51 +35,52 @@ class Canvas {
 
   handleMouseDown(event) {
     const { x, y } = this.getMousePosition(event);
+    const newShapePlaceholder = this.store.getNewShapePlaceholder();
 
-    if (this.newShapePlaceholder) {
+    if (newShapePlaceholder) {
       this.isDragging = true;
-      this.newShapePlaceholder.x = x;
-      this.newShapePlaceholder.y = y;
+      newShapePlaceholder.x = x;
+      newShapePlaceholder.y = y;
     } else {
       const objects = this.store.getObjects();
       for (const object of objects) {
-        if (renderer.isPointInShape(x, y, object)) {
+        if (shaper.isPointInShape(x, y, object)) {
           this.isDragging = true;
           const { id, type, properties, ...rest } = object;
-          this.draggedObject = structuredClone({ id, type, properties });
-          this.draggedObject = Object.assign(this.draggedObject, rest);
-          this.offsetX = x - object.properties.x;
-          this.offsetY = y - object.properties.y;
+          const activeObject = structuredClone({ id, type, properties });
+          this.store.setActiveObject(Object.assign(activeObject, rest,{offsetX: x - object.properties.x, offsetY: y - object.properties.y}));
           this.store.selectObject(object);
           this.setCursor("grabbing");
           break;
-        } else if (renderer.isPointInShapeSpot(x, y, object)) {
-          this.isSizing = renderer.isPointInShapeSpot(x, y, object);
+        } else if (shaper.isPointInShapeSpot(x, y, object)) {
+          this.isSizing = shaper.isPointInShapeSpot(x, y, object);
         }
       }
     }
   }
 
   handleMouseMove(event) {
-    if (!this.draggedObject && !this.newShapePlaceholder) {
+    const activeObject = this.store.getActiveObject();
+    const newShapePlaceholder = this.store.getNewShapePlaceholder();
+    if (!activeObject && !newShapePlaceholder) {
       return;
     }
     const { x, y } = this.getMousePosition(event);
 
-    if (this.newShapePlaceholder) {
-      this.newShapePlaceholder.width = x - this.newShapePlaceholder.x;
-      this.newShapePlaceholder.height = y - this.newShapePlaceholder.y;
-    } else if (this.draggedObject) {
+    if (newShapePlaceholder) {
+      newShapePlaceholder.width = x - newShapePlaceholder.x;
+      newShapePlaceholder.height = y - newShapePlaceholder.y;
+    } else if (activeObject) {
       if (this.isDragging) {
-        this.draggedObject.properties.x = x - this.offsetX;
-        this.draggedObject.properties.y = y - this.offsetY;
+        activeObject.properties.x = x - (activeObject.offsetX || 0);
+        activeObject.properties.y = y - (activeObject.offsetY || 0);
       } else if (this.isSizing) {
-        renderer.updateShapeOnMouseEvent(this.draggedObject, this.isSizing, {
+        shaper.updateShapeOnMouseEvent(activeObject, this.isSizing, {
           x,
           y,
         });
       } else {
-        const spot = renderer.isPointInShapeSpot(x, y, this.draggedObject);
+        const spot = shaper.isPointInShapeSpot(x, y, activeObject);
         if (spot) {
           this.setCursor(`${spot}-resize`);
         }
@@ -148,26 +90,25 @@ class Canvas {
   }
 
   handleMouseUp(event) {
-    if (this.isDragging && this.newShapePlaceholder) {
-      this.store.addShape(this.newShapePlaceholder.type, {
-        ...this.newShapePlaceholder,
-        color: this.selectedColor,
-      });
-    } else if ((this.isDragging || this.isSizing) && this.draggedObject) {
-      const { id, properties } = this.draggedObject;
+    const activeObject = this.store.getActiveObject();
+    const newShapePlaceholder = this.store.getNewShapePlaceholder();
+    if (this.isDragging && newShapePlaceholder) {
+      this.store.addShape(newShapePlaceholder.type, newShapePlaceholder);
+    } else if ((this.isDragging || this.isSizing) && activeObject) {
+      const { id, properties } = activeObject;
       this.store.updateProps(id, properties);
     }
     this.setCursor("default");
     this.isDragging = false;
     this.isSizing = "";
-    this.newShapePlaceholder = null;
+    this.store.clearNewShapePlaceholder();
   }
 
   handleCanvasClick(event) {
     const { x, y } = this.getMousePosition(event);
     const objects = this.store.getObjects();
     for (const object of objects) {
-      if (renderer.isPointInShape(x, y, object)) {
+      if (shaper.isPointInShape(x, y, object)) {
         this.store.selectObject(object);
         break;
       }
@@ -203,17 +144,19 @@ class Canvas {
     this.context.save();
     this.context.scale(this.scale, this.scale);
     const objects = this.store.getObjects();
+    const activeObject = this.store.getActiveObject();
+    const newShapePlaceholder = this.store.getNewShapePlaceholder();
     objects.forEach((object) => {
-      if (object.id !== this.draggedObject?.id) {
-        renderer.drawShape(this.context, object);
+      if (object.id !== activeObject?.id) {
+        shaper.drawShape(this.context, object);
       }
     });
-    if (this.draggedObject) {
-      renderer.drawShape(this.context, this.draggedObject);
-      renderer.drawOutline(this.context, this.draggedObject, this.scale);
+    if (activeObject) {
+      shaper.drawShape(this.context, activeObject);
+      shaper.drawOutline(this.context, activeObject, this.scale);
     }
-    if (this.newShapePlaceholder) {
-      this.drawNewShape(this.newShapePlaceholder);
+    if (newShapePlaceholder) {
+      this.drawNewShape(newShapePlaceholder);
     }
     this.context.restore();
   }
@@ -227,6 +170,7 @@ class Canvas {
   clear() {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
+
   setCursor(cursorType) {
     this.canvas.style.cursor = cursorType;
   }

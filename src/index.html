@@ -8,8 +8,8 @@
   </head>
   <body>
     <div class="main">
-      <div class="column" id="left-panel">
-        <h2>3D Badge maker</h2>
+      <div id="left-panel">
+        <h2 class="title">3D Badge maker</h2>
         <div class="row">
           <input
             type="file"
@@ -19,11 +19,12 @@
           />
           <button id="open-file">Open</button>
           <button id="save-file">Save</button>
+          <button id="export-png">Export PNG</button>
         </div>
         <ul id="object-items" class="column"></ul>
         <button id="clean-canvas">Clean</button>
       </div>
-      <div class="column" id="canvas-container">
+      <div id="canvas-container">
         <div id="tool-panel">
           <button class="tool-button" data-shape="rectangle">Rect</button>
           <button class="tool-button" data-shape="circle">Circle</button>
@@ -42,12 +43,7 @@
         </div>
         <canvas id="canvas" width="800" height="600"></canvas>
       </div>
-      <div class="column" id="properties-panel">
-        <h2>Properties</h2>
-        <button id="remove-shape">Remove</button>
-        <button id="export-png">Export png</button>
-        <div id="properties"></div>
-      </div>
+      <div id="properties-panel"></div>
     </div>
     <div id="footer"></div>
     <script type="module" src="app.js"></script>

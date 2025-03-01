@@ -15,6 +15,8 @@ class Store {
     this.historyIndex = -1;
     this.selectedObject = null;
     this.db = new IndexedDB("BadgeMakerDB", "objects");
+    this.activeObject = null;
+    this.newShapePlaceholder = null;
 
     this.initDB();
   }
@@ -70,6 +72,7 @@ class Store {
     this.objects = this.objects.filter((obj) => obj.id !== objectId);
     this.deleteObject(objectId);
     this.selectedObject = null;
+    this.activeObject = null;
     this.pushToHistory("remove");
     this.notify();
   }
@@ -224,6 +227,34 @@ class Store {
   }
   getHistoryIndex() {
     return this.historyIndex;
+  }
+
+  getActiveObject() {
+    return this.activeObject;
+  }
+
+  setActiveObject(object) {
+    this.activeObject = object;
+    this.notify();
+  }
+
+  clearDraggedObject() {
+    this.activeObject = null;
+    this.notify();
+  }
+
+  getNewShapePlaceholder() {
+    return this.newShapePlaceholder;
+  }
+
+  setNewShapePlaceholder(placeholder) {
+    this.newShapePlaceholder = placeholder;
+    this.notify();
+  }
+
+  clearNewShapePlaceholder() {
+    this.newShapePlaceholder = null;
+    this.notify();
   }
 }
 

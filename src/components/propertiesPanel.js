@@ -7,21 +7,27 @@ class PropertiesPanel {
   }
 
   render() {
-    const propertiesDiv = this.container.querySelector("#properties");
-    propertiesDiv.innerHTML = "";
     const selectedObject = this.store.getSelectedObject();
     if (selectedObject) {
+      this.container.innerHTML = `
+      <h2 class="title">Properties</h2>
+      <button id="remove-shape">Remove</button>
+      <div id="properties"></div>
+    `;
+
+      const propertiesDiv = this.container.querySelector("#properties");
+
       this.tempProperties = { ...selectedObject.properties };
 
       for (const [key, value] of Object.entries(this.tempProperties)) {
         const isNumber = typeof value === "number";
         const propertyElement = document.createElement("div");
         propertyElement.innerHTML = `
-            <label>${key}</label>
-            <input type="text" value="${value}" type=${
-          isNumber ? "number" : "text"
-        } data-key="${key}" />
-          `;
+          <label>${key}</label>
+          <input type="${
+            isNumber ? "number" : "text"
+          }" value="${value}" data-key="${key}" />
+        `;
         propertyElement
           .querySelector("input")
           .addEventListener("input", (event) => {
@@ -38,6 +44,13 @@ class PropertiesPanel {
         this.store.updateProps(selectedObject.id, this.tempProperties);
       });
       propertiesDiv.appendChild(applyButton);
+
+      const removeButton = this.container.querySelector("#remove-shape");
+      removeButton.addEventListener("click", () => {
+        if (selectedObject) {
+          this.store.removeObject(selectedObject.id);
+        }
+      });
     }
   }
 }
