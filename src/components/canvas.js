@@ -98,7 +98,7 @@ class Canvas {
       this.store.addShape(newShapePlaceholder.type, newShapePlaceholder);
     } else if ((this.isDragging || this.isSizing) && activeObject) {
       const { id, properties } = activeObject;
-      this.store.updateProps(id, properties);
+      this.store.updateActiveObjectProps(id, properties);
     }
     this.setCursor("default");
     this.isDragging = false;

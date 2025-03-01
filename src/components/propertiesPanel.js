@@ -1,3 +1,52 @@
+const shapePropertiesMap = {
+  ["rectangle"]: {
+    x: "number",
+    y: "number",
+    width: "number",
+    height: "number",
+    border: "number",
+    rounded: "number",
+    rotate: "number",
+    color: "color",
+  },
+  ["circle"]: {
+    x: "number",
+    y: "number",
+    radius: "number",
+    border: "number",
+    color: "color",
+  },
+  ["image"]: {
+    x: "number",
+    y: "number",
+    width: "number",
+    height: "number",
+    imageSrc: "text",
+  },
+  ["text"]: {
+    x: "number",
+    y: "number",
+    fontSize: "number",
+    rotation: "number",
+    text: "text",
+    color: "color",
+    fontFamily: "fontFamily",
+  },
+  ["circle-text"]: {
+    x: "number",
+    y: "number",
+    fontSize: "number",
+    radius: "number",
+    startAngle: "number",
+    kerning: "number",
+    text: "text",
+    textInside: "boolean",
+    inwardFacing: "boolean",
+    color: "color",
+    fontFamily: "fontFamily",
+  },
+};
+
 class PropertiesPanel {
   constructor(container, store) {
     this.store = store;
@@ -40,30 +89,72 @@ class PropertiesPanel {
     const propertiesDiv = this.container.querySelector("#properties");
 
     this.tempProperties = { ...activeObject.properties };
+    const shapeProperties = shapePropertiesMap[activeObject.type];
 
-    for (const [key, value] of Object.entries(this.tempProperties)) {
-      const isNumber = typeof value === "number";
+    for (const [prop, type] of Object.entries(shapeProperties)) {
       const propertyElement = document.createElement("div");
-      propertyElement.innerHTML = `
-        <label>${key}</label>
+      if (type === "number" || type === "text") {
+        const isNumber = prop === "number";
+        const value = this.tempProperties[prop] || 0;
+        propertyElement.innerHTML = `
+        <label>${prop}</label>
         <input type="${
           isNumber ? "number" : "text"
-        }" value="${value}" data-key="${key}" />
+        }" value="${value}" data-key="${prop}" />
       `;
-      propertyElement
-        .querySelector("input")
-        .addEventListener("input", (event) => {
-          this.tempProperties[key] = isNumber
-            ? +event.target.value
-            : event.target.value;
-        });
+        propertyElement
+          .querySelector("input")
+          .addEventListener("input", (event) => {
+            this.tempProperties[prop] = isNumber
+              ? +event.target.value
+              : event.target.value;
+          });
+      } else if (type === "color") {
+        const value = this.tempProperties[prop] || "#000000";
+        propertyElement.innerHTML = `
+        <label>${prop}</label>
+        <input type="color" value="${value}" data-key="${prop}" />
+      `;
+        propertyElement
+          .querySelector("input")
+          .addEventListener("input", (event) => {
+            this.tempProperties[prop] = event.target.value;
+          });
+      } else if (type === "boolean") {
+        const value = this.tempProperties[prop] || false;
+        propertyElement.innerHTML = `
+        <label>${prop}</label>
+        <input type="checkbox" ${value ? "checked" : ""} data-key="${prop}" />
+      `;
+        propertyElement
+          .querySelector("input")
+          .addEventListener("input", (event) => {
+            this.tempProperties[prop] = event.target.checked;
+          });
+      } else if (type === "fontFamily") {
+        const value = this.tempProperties[prop] || "Arial";
+        propertyElement.innerHTML = `
+        <label>${prop}</label>
+        <select data-key="${prop}">
+          <option value="Arial">Arial</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier New">Courier New</option>
+        </select>
+      `;
+        propertyElement
+          .querySelector("select")
+          .addEventListener("change", (event) => {
+            this.tempProperties[prop] = event.target.value;
+          });
+      }
       propertiesDiv.appendChild(propertyElement);
     }
 
     const applyButton = document.createElement("button");
     applyButton.textContent = "Apply";
     applyButton.addEventListener("click", () => {
-      this.store.updateProps(activeObject.id, this.tempProperties);
+      console.log("update", this.tempProperties);
+      this.store.updateActiveObjectProps(activeObject.id, this.tempProperties);
     });
     propertiesDiv.appendChild(applyButton);
 

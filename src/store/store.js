@@ -189,7 +189,15 @@ class Store {
     this.notify();
   }
 
-  updateProps(id, properties) {
+  updateActiveObjectProps(id, properties) {
+    if (!this.activeObject) {
+      return;
+    }
+    this.activeObject = {
+      ...this.activeObject,
+      properties: { ...this.activeObject.properties, ...properties },
+    };
+    this.saveObject({ id, type: this.activeObject.type, properties });
     this.objects = this.objects.map((obj) =>
       obj.id === id
         ? { ...obj, properties: { ...obj.properties, ...properties } }
@@ -286,8 +294,8 @@ class Store {
       const updateObject = updateObjects.find(
         (updateObj) => updateObj.id === obj.id
       );
-      if(updateObject){
-        const o = { ...obj, properties: updateObject.properties }
+      if (updateObject) {
+        const o = { ...obj, properties: updateObject.properties };
         this.saveObject(o);
         return o;
       }

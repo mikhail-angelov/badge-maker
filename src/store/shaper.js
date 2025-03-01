@@ -8,6 +8,11 @@ document.body.appendChild(divForMeasureText);
 const TEXT_OUTLINE_PADDING = 5;
 const RECT_OUTLINE_PADDING = 2;
 
+const p90 = Math.PI * 0.5;
+const p180 = Math.PI;
+const p270 = Math.PI * 1.5;
+const p360 = Math.PI * 2;
+
 const renderRect = (context, shape) => {
   const {
     x,
@@ -21,22 +26,23 @@ const renderRect = (context, shape) => {
   context.strokeStyle = color || "black";
   context.lineWidth = border;
   context.beginPath();
-  context.moveTo(x + rounded, y);
-  context.lineTo(x + width - rounded, y);
-  context.quadraticCurveTo(x + width, y, x + width, y + rounded);
-  context.lineTo(x + width, y + height - rounded);
-  context.quadraticCurveTo(
-    x + width,
-    y + height,
-    x + width - rounded,
-    y + height
-  );
-  context.lineTo(x + rounded, y + height);
-  context.quadraticCurveTo(x, y + height, x, y + height - rounded);
-  context.lineTo(x, y + rounded);
-  context.quadraticCurveTo(x, y, x + rounded, y);
+
+  if (rounded <= 0) {
+    context.rect(x, y, width, height);
+    context.stroke();
+    return;
+  }
+  let r = Math.min(rounded, width * 0.5, height * 0.5);
+  context.moveTo(x, y + r);
+  context.arc(x + r, y + r, r, p180, p270);
+  context.arc(x + width - r, y + r, r, p270, p360);
+  context.arc(x + width - r, y + height - r, r, 0, p90);
+  context.arc(x + r, y + height - r, r, p90, p180);
+  context.closePath();
+
   context.stroke();
 };
+
 const renderCircle = (context, shape) => {
   const { x, y, radius, border = 2, color } = shape.properties;
   context.strokeStyle = color || "black";
@@ -88,10 +94,10 @@ const renderCircleText = (context, shape) => {
     radius,
     startAngle = 0,
     kerning = 0,
+    textInside = true,
+    inwardFacing = true,
   } = shape.properties;
   let align = "center";
-  let textInside = true;
-  let inwardFacing = true;
 
   const clockwise = align == "right" ? 1 : -1; // draw clockwise for aligned right. Else Anticlockwise
   startAngle = startAngle * (Math.PI / 180); // convert to radians
