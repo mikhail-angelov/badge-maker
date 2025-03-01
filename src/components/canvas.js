@@ -44,16 +44,16 @@ class Canvas {
     } else {
       const objects = this.store.getObjects();
       for (const object of objects) {
-        if (shaper.isPointInShape(x, y, object)) {
+        if (shaper.isPointInShapeSpot(x, y, object)) {
+          this.isSizing = shaper.isPointInShapeSpot(x, y, object);
+        } else if (shaper.isPointInShape(x, y, object) && !event.shiftKey) {
           this.isDragging = true;
-          const { id, type, properties, ...rest } = object;
-          const activeObject = structuredClone({ id, type, properties });
-          this.store.setActiveObject(Object.assign(activeObject, rest,{offsetX: x - object.properties.x, offsetY: y - object.properties.y}));
-          this.store.selectObject(object);
+          this.store.setActiveObject(object, {
+            offsetX: x - object.properties.x,
+            offsetY: y - object.properties.y,
+          });
           this.setCursor("grabbing");
           break;
-        } else if (shaper.isPointInShapeSpot(x, y, object)) {
-          this.isSizing = shaper.isPointInShapeSpot(x, y, object);
         }
       }
     }
@@ -70,15 +70,18 @@ class Canvas {
     if (newShapePlaceholder) {
       newShapePlaceholder.width = x - newShapePlaceholder.x;
       newShapePlaceholder.height = y - newShapePlaceholder.y;
+      this.scheduleRender();
     } else if (activeObject) {
       if (this.isDragging) {
         activeObject.properties.x = x - (activeObject.offsetX || 0);
         activeObject.properties.y = y - (activeObject.offsetY || 0);
+        this.scheduleRender();
       } else if (this.isSizing) {
         shaper.updateShapeOnMouseEvent(activeObject, this.isSizing, {
           x,
           y,
         });
+        this.scheduleRender();
       } else {
         const spot = shaper.isPointInShapeSpot(x, y, activeObject);
         if (spot) {
@@ -86,7 +89,6 @@ class Canvas {
         }
       }
     }
-    this.scheduleRender();
   }
 
   handleMouseUp(event) {
@@ -109,7 +111,9 @@ class Canvas {
     const objects = this.store.getObjects();
     for (const object of objects) {
       if (shaper.isPointInShape(x, y, object)) {
-        this.store.selectObject(object);
+        if (event.shiftKey) {
+          this.store.toggleObjectSelection(object.id);
+        }
         break;
       }
     }
@@ -146,14 +150,36 @@ class Canvas {
     const objects = this.store.getObjects();
     const activeObject = this.store.getActiveObject();
     const newShapePlaceholder = this.store.getNewShapePlaceholder();
-    objects.forEach((object) => {
-      if (object.id !== activeObject?.id) {
-        shaper.drawShape(this.context, object);
+    const selectedObjectsIds = this.store.getSelectedObjectIds();
+    const drawSelection =
+      (selectedObjectsIds.length > 0 && !activeObject) ||
+      selectedObjectsIds.length > 1;
+    if (drawSelection) {
+      objects.forEach((object) => {
+        shaper.drawShape({ context: this.context, shape: object });
+        if (selectedObjectsIds.includes(object.id)) {
+          shaper.drawOutline({
+            context: this.context,
+            shape: object,
+            scale: this.scale,
+            withoutSpots: true,
+          });
+        }
+      });
+    } else {
+      objects.forEach((object) => {
+        if (object.id !== activeObject?.id) {
+          shaper.drawShape({ context: this.context, shape: object });
+        }
+      });
+      if (activeObject) {
+        shaper.drawShape({ context: this.context, shape: activeObject });
+        shaper.drawOutline({
+          context: this.context,
+          shape: activeObject,
+          scale: this.scale,
+        });
       }
-    });
-    if (activeObject) {
-      shaper.drawShape(this.context, activeObject);
-      shaper.drawOutline(this.context, activeObject, this.scale);
     }
     if (newShapePlaceholder) {
       this.drawNewShape(newShapePlaceholder);

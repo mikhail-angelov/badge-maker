@@ -4,6 +4,7 @@ divForMeasureText.style.position = "absolute";
 divForMeasureText.style.top = "-10000px";
 divForMeasureText.style.left = "-10000px";
 document.body.appendChild(divForMeasureText);
+
 const TEXT_OUTLINE_PADDING = 5;
 const RECT_OUTLINE_PADDING = 2;
 
@@ -135,7 +136,7 @@ const renderCircleText = (context, shape) => {
   context.restore(); // Restore the context to its original state
 };
 
-const renderOutline = (context, rect) => {
+const renderOutline = (context, rect, withoutSpots) => {
   const { x, y, width, height } = rect;
   const cornerSize = 8; // Size of the corner squares
 
@@ -146,49 +147,50 @@ const renderOutline = (context, rect) => {
   context.setTransform(1, 0, 0, 1, 0, 0);
 
   // Draw the light blue outline
-  context.strokeStyle = "lightblue";
+  context.strokeStyle = withoutSpots?"orange":"lightblue";
   context.lineWidth = 1;
   context.strokeRect(x, y, width, height);
 
-  // Draw small squares on each corner
-  context.fillStyle = "lightblue";
-  context.strokeRect(
-    x - cornerSize / 2,
-    y - cornerSize / 2,
-    cornerSize,
-    cornerSize
-  ); // Top-left corner
-  context.strokeRect(
-    x + width - cornerSize / 2,
-    y - cornerSize / 2,
-    cornerSize,
-    cornerSize
-  ); // Top-right corner
-  context.strokeRect(
-    x - cornerSize / 2,
-    y + height - cornerSize / 2,
-    cornerSize,
-    cornerSize
-  ); // Bottom-left corner
-  context.strokeRect(
-    x + width - cornerSize / 2,
-    y + height - cornerSize / 2,
-    cornerSize,
-    cornerSize
-  ); // Bottom-right corner
-
+  if (!withoutSpots) {
+    // Draw small squares on each corner
+    context.fillStyle = "lightblue";
+    context.strokeRect(
+      x - cornerSize / 2,
+      y - cornerSize / 2,
+      cornerSize,
+      cornerSize
+    ); // Top-left corner
+    context.strokeRect(
+      x + width - cornerSize / 2,
+      y - cornerSize / 2,
+      cornerSize,
+      cornerSize
+    ); // Top-right corner
+    context.strokeRect(
+      x - cornerSize / 2,
+      y + height - cornerSize / 2,
+      cornerSize,
+      cornerSize
+    ); // Bottom-left corner
+    context.strokeRect(
+      x + width - cornerSize / 2,
+      y + height - cornerSize / 2,
+      cornerSize,
+      cornerSize
+    ); // Bottom-right corner
+  }
   // Restore the context to its original state
   context.restore();
 };
-const renderRectOutline = (context, shape, scale) => {
+const renderRectOutline = (context, shape, scale, withoutSpots) => {
   const x = (shape.properties.x - RECT_OUTLINE_PADDING) * scale;
   const y = (shape.properties.y - RECT_OUTLINE_PADDING) * scale;
   const width = (shape.properties.width + RECT_OUTLINE_PADDING * 2) * scale;
   const height = (shape.properties.height + RECT_OUTLINE_PADDING * 2) * scale;
-  renderOutline(context, { x, y, width, height });
+  renderOutline(context, { x, y, width, height }, withoutSpots);
 };
 
-const renderTextOutline = (context, shape, scale) => {
+const renderTextOutline = (context, shape, scale, withoutSpots) => {
   const { x, y, width, height } = getTextBox(shape.properties);
 
   if (shape.properties.rotation) {
@@ -198,24 +200,32 @@ const renderTextOutline = (context, shape, scale) => {
     context.rotate((shape.properties.rotation * Math.PI) / 180);
     context.translate(-centerX, -centerY);
   }
-  renderOutline(context, {
-    x: x * scale,
-    y: y * scale,
-    width: width * scale,
-    height: height * scale,
-  });
+  renderOutline(
+    context,
+    {
+      x: x * scale,
+      y: y * scale,
+      width: width * scale,
+      height: height * scale,
+    },
+    withoutSpots
+  );
 };
 
-const renderCircleOutline = (context, shape, scale) => {
+const renderCircleOutline = (context, shape, scale, withoutSpots) => {
   const { x, y, width, height } = shape.rect
     ? shape.rect
     : getCircleBox(shape.properties);
-  renderOutline(context, {
-    x: x * scale,
-    y: y * scale,
-    width: width * scale,
-    height: height * scale,
-  });
+  renderOutline(
+    context,
+    {
+      x: x * scale,
+      y: y * scale,
+      width: width * scale,
+      height: height * scale,
+    },
+    withoutSpots
+  );
 };
 
 const getRectBox = (properties) => {
@@ -317,7 +327,7 @@ const updateShapeMap = {
 };
 
 // draw functions should never throw exceptions. They should log errors and continue.
-const drawShape = (context, shape) => {
+const drawShape = ({ context, shape }) => {
   try {
     context.save();
     renderMap[shape.type](context, shape);
@@ -327,10 +337,10 @@ const drawShape = (context, shape) => {
   }
 };
 
-const drawOutline = (context, shape, scale) => {
+const drawOutline = ({ context, shape, scale, withoutSpots }) => {
   try {
     context.save();
-    renderOutlineMap[shape.type](context, shape, scale);
+    renderOutlineMap[shape.type](context, shape, scale, withoutSpots);
     context.restore();
   } catch (e) {
     console.log("Error drawing outline", shape, e);
@@ -369,9 +379,7 @@ const isPointInShapeSpot = (x, y, shape) => {
       y: objY,
       width,
       height,
-    } = shape.rect
-      ? shape.rect
-      : shapeBoxMap[shape.type](shape.properties);
+    } = shape.rect ? shape.rect : shapeBoxMap[shape.type](shape.properties);
     const cornerSize = 8; // Size of the corner squares
 
     // Define the spots

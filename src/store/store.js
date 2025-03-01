@@ -1,5 +1,3 @@
-import IndexedDB from "./IndexedDB.js";
-
 class Shape {
   constructor(id, type, properties) {
     this.id = id;
@@ -8,13 +6,13 @@ class Shape {
   }
 }
 class Store {
-  constructor() {
+  constructor(db) {
     this.objects = [];
     this.listeners = [];
     this.history = [];
     this.historyIndex = -1;
-    this.selectedObject = null;
-    this.db = new IndexedDB("BadgeMakerDB", "objects");
+    this.selectedObjectsIds = [];
+    this.db = db;
     this.activeObject = null;
     this.newShapePlaceholder = null;
 
@@ -71,7 +69,9 @@ class Store {
   removeObject(objectId) {
     this.objects = this.objects.filter((obj) => obj.id !== objectId);
     this.deleteObject(objectId);
-    this.selectedObject = null;
+    this.selectedObjectsIds = this.selectedObjectsIds.filter(
+      (obj) => obj.id !== objectId
+    );
     this.activeObject = null;
     this.pushToHistory("remove");
     this.notify();
@@ -80,7 +80,7 @@ class Store {
   async clearObjects() {
     try {
       this.objects = [];
-      this.selectedObject = null;
+      this.selectedObjectsIds = [];
       await this.db.deleteAllObjects();
       this.history = [];
       this.historyIndex = -1;
@@ -92,7 +92,7 @@ class Store {
 
   async replaceObjects(objects) {
     try {
-      this.selectedObject = null;
+      this.selectedObjectsIds = [];
       await this.db.deleteAllObjects();
       await this.db.saveObjects(objects);
       this.objects = this.loadObjects(objects);
@@ -176,7 +176,6 @@ class Store {
     }
 
     this.objects = [...this.objects, shape];
-    this.selectedObject = shape;
     this.saveObject(shape);
     this.pushToHistory("add");
     this.notify();
@@ -188,15 +187,7 @@ class Store {
         ? { ...obj, properties: { ...obj.properties, ...properties } }
         : obj
     );
-    this.selectedObject = this.objects.find((obj) => obj.id === id);
-    this.saveObject(this.selectedObject);
     this.pushToHistory("update");
-    this.notify();
-  }
-
-  selectObject(object) {
-    this.selectedObject = object;
-    console.log("selectedObject", this.selectedObject);
     this.notify();
   }
 
@@ -208,7 +199,7 @@ class Store {
     if (index >= 0 && index < this.history.length) {
       this.historyIndex = index;
       this.objects = this.history[index].items;
-      this.selectedObject = null;
+      this.selectedObjectsIds = [];
       this.saveAllObjects();
       this.notify();
     }
@@ -218,8 +209,8 @@ class Store {
     return this.objects;
   }
 
-  getSelectedObject() {
-    return this.selectedObject;
+  getSelectedObjectIds() {
+    return this.selectedObjectsIds;
   }
 
   getHistory() {
@@ -233,8 +224,11 @@ class Store {
     return this.activeObject;
   }
 
-  setActiveObject(object) {
-    this.activeObject = object;
+  setActiveObject(object, offset = {}) {
+    const { id, type, properties, ...rest } = object;
+    const activeObject = structuredClone({ id, type, properties });
+    this.activeObject = { ...activeObject, ...rest, ...offset };
+    this.toggleObjectSelection(object.id);
     this.notify();
   }
 
@@ -254,6 +248,52 @@ class Store {
 
   clearNewShapePlaceholder() {
     this.newShapePlaceholder = null;
+    this.notify();
+  }
+
+  toggleObjectSelection(id) {
+    if (!this.selectedObjectsIds.includes(id)) {
+      this.selectedObjectsIds.push(id);
+    } else {
+      this.selectedObjectsIds = this.selectedObjectsIds.filter(
+        (item) => item !== id
+      );
+    }
+    this.notify();
+  }
+
+  cleanAllSelections() {
+    this.selectedObjectsIds = [];
+    this.activeObject = null;
+    this.notify();
+  }
+
+  justify(alignment) {
+    // Implement the logic for justification based on the alignment parameter
+    console.log(`Justify called with alignment: ${alignment}`);
+    // Example logic (you need to implement the actual logic based on your requirements)
+    // this.selectedObjects.forEach((object) => {
+    //   switch (alignment) {
+    //     case "center-horizontal":
+    //       object.properties.x = (this.canvas.width - object.properties.width) / 2;
+    //       break;
+    //     case "center-vertical":
+    //       object.properties.y = (this.canvas.height - object.properties.height) / 2;
+    //       break;
+    //     case "justify-left":
+    //       object.properties.x = 0;
+    //       break;
+    //     case "justify-right":
+    //       object.properties.x = this.canvas.width - object.properties.width;
+    //       break;
+    //     case "justify-top":
+    //       object.properties.y = 0;
+    //       break;
+    //     case "justify-bottom":
+    //       object.properties.y = this.canvas.height - object.properties.height;
+    //       break;
+    //   }
+    // });
     this.notify();
   }
 }

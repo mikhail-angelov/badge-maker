@@ -49,7 +49,7 @@ h2.title {
     background-color: #e0e0e0;
 }
 #object-items li:hover {
-  background-color: #e0e0e0;
+  background-color: #a0a0c0;
 }
 #save-file{
   margin: 0 10px;
@@ -95,6 +95,15 @@ h2.title {
 input[type="number"] {
   width: 100%;
   margin-bottom: 10px;
+}
+
+#properties-panel .justify-buttons{
+  margin-top: 10px;
+}
+
+#properties-panel .justify-button {
+  height: 30px;
+  width: 30px;
 }
 
 #footer {

@@ -1,3 +1,4 @@
+import IndexedDB from "./store/indexedDB.js";
 import Store from "./store/store.js";
 import LeftPanel from "./components/leftPanel.js";
 import Canvas from "./components/canvas.js";
@@ -7,7 +8,8 @@ import Tool from "./components/tool.js";
 
 class App {
   constructor() {
-    this.store = new Store();
+    this.db = new IndexedDB("BadgeMakerDB", "objects");
+    this.store = new Store(this.db);
     this.leftPanel = new LeftPanel(
       document.getElementById("object-items"),
       this.store
@@ -50,9 +52,13 @@ class App {
         if (activeObject) {
           this.store.removeObject(activeObject.id);
         }
-      } else if (event.key === "Escape") {
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
         this.store.clearNewShapePlaceholder();
         this.store.clearDraggedObject();
+        this.store.clearSelectedObjects();
         this.canvas.setCursor("default");
       }
     });

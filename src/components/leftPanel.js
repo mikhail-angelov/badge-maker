@@ -24,13 +24,22 @@ class LeftPanel {
   render() {
     this.container.innerHTML = "";
     const objects = this.store.getObjects();
-    const selectedObject = this.store.getSelectedObject();
+    const activeObject = this.store.getActiveObject();
+    const selectedObjectIds = this.store.getSelectedObjectIds();
     objects.forEach((object) => {
       const listItem = document.createElement("li");
-      const isSelected = selectedObject && object.id === selectedObject.id;
+      const isSelected =
+        (activeObject && object.id === activeObject.id) ||
+        selectedObjectIds.includes(object.id);
       listItem.className = isSelected ? "selected" : "";
       listItem.textContent = `${object.type}:${object.id}`;
-      listItem.addEventListener("click", () => this.store.selectObject(object));
+      listItem.addEventListener("click", (event) => {
+        if (event.shiftKey) {
+          this.store.toggleObjectSelection(object.id);
+        } else {
+          this.store.setActiveObject(object);
+        }
+      });
       this.container.appendChild(listItem);
     });
   }
