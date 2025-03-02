@@ -19,6 +19,17 @@ class Canvas {
     this.canvas.addEventListener("mousemove", this.handleMouseMove.bind(this));
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
+
+    window.addEventListener("resize", this.handleResize.bind(this));
+    this.handleResize();
+  }
+
+  handleResize() {
+    const container = this.canvas.parentElement;
+    const { width, height } = container.getBoundingClientRect();
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.scheduleRender();
   }
 
   getMousePosition(event) {
@@ -48,6 +59,7 @@ class Canvas {
         const object = objects[i];
         if (shaper.isPointInShapeSpot(x, y, object)) {
           this.isSizing = shaper.isPointInShapeSpot(x, y, object);
+          break;
         } else if (shaper.isPointInShape(x, y, object) && !event.shiftKey) {
           this.isDragging = true;
           this.store.setActiveObject(object, {

@@ -63,7 +63,7 @@ h2.title {
   color: red;
 }
 
-#canvas-container {
+/* #canvas-container {
   width: 60%;
   flex: 1;
   overflow: hidden;
@@ -71,7 +71,24 @@ h2.title {
   flex-direction: column;
   background-color: #fff;
 }
+
+#canvas {
+  border: 1px solid #000;
+} */
+#canvas-container {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+#canvas {
+  position: absolute;
+}
+
 #tool-panel {
+  position: absolute;
+  z-index: 1;
   display: flex;
   padding: 10px;
   background-color: #f0f0f0;
@@ -81,10 +98,6 @@ h2.title {
 }
 #tool-panel #load-image {
   margin-right: 10px;
-}
-
-#canvas {
-  border: 1px solid #000;
 }
 
 #properties-panel {
