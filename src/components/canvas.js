@@ -43,7 +43,9 @@ class Canvas {
       newShapePlaceholder.y = y;
     } else {
       const objects = this.store.getObjects();
-      for (const object of objects) {
+      // reverse loop to get the top object first
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const object = objects[i];
         if (shaper.isPointInShapeSpot(x, y, object)) {
           this.isSizing = shaper.isPointInShapeSpot(x, y, object);
         } else if (shaper.isPointInShape(x, y, object) && !event.shiftKey) {
@@ -111,7 +113,8 @@ class Canvas {
     const objects = this.store.getObjects();
     const selectedObjectsIds = this.store.getSelectedObjectIds();
     let clicked = false;
-    for (const object of objects) {
+    for (let i = objects.length - 1; i >= 0; i--) {
+      const object = objects[i];
       if (shaper.isPointInShape(x, y, object)) {
         if (event.shiftKey) {
           this.store.toggleObjectSelection(object.id);

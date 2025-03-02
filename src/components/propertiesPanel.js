@@ -1,51 +1,5 @@
-const shapePropertiesMap = {
-  ["rectangle"]: {
-    x: "number",
-    y: "number",
-    width: "number",
-    height: "number",
-    border: "number",
-    rounded: "number",
-    rotate: "number",
-    color: "color",
-  },
-  ["circle"]: {
-    x: "number",
-    y: "number",
-    radius: "number",
-    border: "number",
-    color: "color",
-  },
-  ["image"]: {
-    x: "number",
-    y: "number",
-    width: "number",
-    height: "number",
-    imageSrc: "text",
-  },
-  ["text"]: {
-    x: "number",
-    y: "number",
-    fontSize: "number",
-    rotation: "number",
-    text: "text",
-    color: "color",
-    fontFamily: "fontFamily",
-  },
-  ["circle-text"]: {
-    x: "number",
-    y: "number",
-    fontSize: "number",
-    radius: "number",
-    startAngle: "number",
-    kerning: "number",
-    text: "text",
-    textInside: "boolean",
-    inwardFacing: "boolean",
-    color: "color",
-    fontFamily: "fontFamily",
-  },
-};
+import shaper from "../store/shaper.js";
+import { FontFamilyModal } from "./fontFamilyModal.js";
 
 class PropertiesPanel {
   constructor(container, store) {
@@ -53,6 +7,29 @@ class PropertiesPanel {
     this.container = container;
     this.tempProperties = {};
     this.store.subscribe(this.render.bind(this));
+  }
+
+  openFontSelectorModal(currentFont, text) {
+    const modalContainer = document.createElement("div");
+    modalContainer.className = "modal-container";
+    document.body.appendChild(modalContainer);
+
+    fontFamilyModal = new FontFamilyModal(
+      modalContainer,
+      currentFont,
+      text,
+      (font) => {
+        if (font) {
+          const activeObject = this.store.getActiveObject();
+          this.tempProperties.fontFamily = font;
+          this.store.updateActiveObjectProps(
+            activeObject.id,
+            this.tempProperties
+          );
+        }
+        document.body.removeChild(modalContainer);
+      }
+    );
   }
 
   renderSelectedGroup() {
@@ -81,23 +58,33 @@ class PropertiesPanel {
   renderActiveObject() {
     const activeObject = this.store.getActiveObject();
     this.container.innerHTML = `
-      <h2 class="title">Properties</h2>
-      <button id="remove-shape">Remove</button>
-      <div id="properties"></div>
+      <div class="spread">
+        <h2 class="title">Properties</h2>
+        <button id="remove-shape">Remove</button>
+      </div>
+      <div class="row">
+        <button id="to-front">To Front</button>
+        <p>&nbsp;&nbsp;</p>
+        <button id="to-back">To Back</button>
+      </div>
+      <form id="properties">
+      <p class="type">Type: <b>${activeObject.type}</b></p>
+      </form>
     `;
 
-    const propertiesDiv = this.container.querySelector("#properties");
+    const form = this.container.querySelector("#properties");
 
     this.tempProperties = { ...activeObject.properties };
-    const shapeProperties = shapePropertiesMap[activeObject.type];
+    const shapeProperties = shaper.shapePropertiesMap[activeObject.type];
 
     for (const [prop, type] of Object.entries(shapeProperties)) {
       const propertyElement = document.createElement("div");
+      propertyElement.className = "row";
       if (type === "number" || type === "text") {
-        const isNumber = prop === "number";
+        const isNumber = type === "number";
         const value = this.tempProperties[prop] || 0;
         propertyElement.innerHTML = `
-        <label>${prop}</label>
+        <label class="label">${prop}</label>
         <input type="${
           isNumber ? "number" : "text"
         }" value="${value}" data-key="${prop}" />
@@ -112,7 +99,7 @@ class PropertiesPanel {
       } else if (type === "color") {
         const value = this.tempProperties[prop] || "#000000";
         propertyElement.innerHTML = `
-        <label>${prop}</label>
+        <label class="label">${prop}</label>
         <input type="color" value="${value}" data-key="${prop}" />
       `;
         propertyElement
@@ -123,7 +110,7 @@ class PropertiesPanel {
       } else if (type === "boolean") {
         const value = this.tempProperties[prop] || false;
         propertyElement.innerHTML = `
-        <label>${prop}</label>
+        <label class="label">${prop}</label>
         <input type="checkbox" ${value ? "checked" : ""} data-key="${prop}" />
       `;
         propertyElement
@@ -134,35 +121,42 @@ class PropertiesPanel {
       } else if (type === "fontFamily") {
         const value = this.tempProperties[prop] || "Arial";
         propertyElement.innerHTML = `
-        <label>${prop}</label>
-        <select data-key="${prop}">
-          <option value="Arial">Arial</option>
-          <option value="Times New Roman">Times New Roman</option>
-          <option value="Courier New">Courier New</option>
-        </select>
+        <label class="label">${prop}</label>
+        <button type="button" class="font-family-button" data-key="${prop}">${value}</button>
       `;
         propertyElement
-          .querySelector("select")
-          .addEventListener("change", (event) => {
-            this.tempProperties[prop] = event.target.value;
+          .querySelector(".font-family-button")
+          .addEventListener("click", () => {
+            this.openFontSelectorModal(value, this.tempProperties.text);
           });
       }
-      propertiesDiv.appendChild(propertyElement);
+      form.appendChild(propertyElement);
     }
 
     const applyButton = document.createElement("button");
     applyButton.textContent = "Apply";
-    applyButton.addEventListener("click", () => {
-      console.log("update", this.tempProperties);
+
+    form.appendChild(applyButton);
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
       this.store.updateActiveObjectProps(activeObject.id, this.tempProperties);
     });
-    propertiesDiv.appendChild(applyButton);
 
     const removeButton = this.container.querySelector("#remove-shape");
     removeButton.addEventListener("click", () => {
       if (activeObject) {
         this.store.removeObject(activeObject.id);
       }
+    });
+    
+    const toFrontButton = this.container.querySelector("#to-front");
+    toFrontButton.addEventListener("click", () => {
+      this.store.moveToFront(activeObject.id);
+    });
+
+    const toBackButton = this.container.querySelector("#to-back");
+    toBackButton.addEventListener("click", () => {
+      this.store.moveToBack(activeObject.id);
     });
   }
 

@@ -1,3 +1,52 @@
+const shapePropertiesMap = {
+  ["rectangle"]: {
+    x: "number",
+    y: "number",
+    width: "number",
+    height: "number",
+    border: "number",
+    rounded: "number",
+    rotate: "number",
+    color: "color",
+  },
+  ["circle"]: {
+    x: "number",
+    y: "number",
+    radius: "number",
+    border: "number",
+    color: "color",
+  },
+  ["image"]: {
+    x: "number",
+    y: "number",
+    width: "number",
+    height: "number",
+    imageSrc: "text",
+  },
+  ["text"]: {
+    x: "number",
+    y: "number",
+    fontSize: "number",
+    rotation: "number",
+    text: "text",
+    color: "color",
+    fontFamily: "fontFamily",
+  },
+  ["circle-text"]: {
+    x: "number",
+    y: "number",
+    fontSize: "number",
+    radius: "number",
+    startAngle: "number",
+    kerning: "number",
+    text: "text",
+    textInside: "boolean",
+    inwardFacing: "boolean",
+    color: "color",
+    fontFamily: "fontFamily",
+  },
+};
+
 const divForMeasureText = document.createElement("div");
 divForMeasureText.innerHTML = "";
 divForMeasureText.style.position = "absolute";
@@ -179,7 +228,10 @@ const renderOutline = (context, rect, withoutSpots) => {
 
   // Draw the light blue outline
   context.strokeStyle = withoutSpots ? "orange" : "lightblue";
-  context.lineWidth = 1;
+  context.lineWidth = 2;
+  if(withoutSpots){
+    context.setLineDash([14, 15]);
+  }
   context.strokeRect(x, y, width, height);
 
   if (!withoutSpots) {
@@ -535,6 +587,7 @@ const alignObjects = (objects, alignment) => {
 };
 
 export default {
+  shapePropertiesMap,
   drawShape,
   drawOutline,
   updateShapeOnMouseEvent,

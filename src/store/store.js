@@ -305,6 +305,32 @@ class Store {
     this.pushToHistory("update");
     this.notify();
   }
+
+  moveToFront(objectId) {
+    const index = this.objects.findIndex((obj) => obj.id === objectId);
+    if (index > -1) {
+      const object = this.objects[index];
+      this.objects = [
+        ...this.objects.slice(0, index),
+        ...this.objects.slice(index + 1),
+        object,
+      ];
+      this.notify();
+    }
+  }
+
+  moveToBack(objectId) {
+    const index = this.objects.findIndex((obj) => obj.id === objectId);
+    if (index > -1) {
+      const object = this.objects[index];
+      this.objects = [
+        object,
+        ...this.objects.slice(0, index),
+        ...this.objects.slice(index + 1),
+      ];
+      this.notify();
+    }
+  }
 }
 
 export default Store;

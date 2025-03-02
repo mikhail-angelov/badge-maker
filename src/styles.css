@@ -33,25 +33,30 @@ html {
 h2.title {
   margin-top: 0;
 }
+.spread {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+}
 
 #object-items {
   flex: 1;
   overflow: auto;
   list-style: none;
   padding: 0;
-  margin: 10px 0;  
+  margin: 10px 0;
 }
 #object-items li {
   padding: 4px;
   cursor: pointer;
 }
 #object-items li.selected {
-    background-color: #e0e0e0;
+  background-color: #e0e0e0;
 }
 #object-items li:hover {
   background-color: #a0a0c0;
 }
-#save-file{
+#save-file {
   margin: 0 10px;
 }
 #clear-canvas {
@@ -93,11 +98,25 @@ h2.title {
 }
 #properties-panel input[type="text"],
 input[type="number"] {
-  width: 100%;
-  margin-bottom: 10px;
+  flex: 1;
 }
 
-#properties-panel .justify-buttons{
+#properties-panel .type {
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+#properties-panel .row {
+  height: 32px;
+  align-items: center;
+}
+
+#properties-panel .label {
+  width: 100px;
+  min-width: 100px;
+}
+
+#properties-panel .justify-buttons {
   margin-top: 10px;
 }
 
@@ -136,4 +155,48 @@ input[type="number"] {
 
 .history-square:hover {
   background-color: #aaa;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.modal-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  background: white;
+  padding: 20px;
+  z-index: 1000;
+  width: 600px;
+  max-height: 80%;
+}
+
+.modal-content .font-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 10px 0;
+}
+
+.font-item {
+  margin: 15px 0;
+  cursor: pointer;
+}
+
+.font-item:hover {
+  background: #f0f0f0;
+}
+
+.font-item.selected {
+  border-color: #007bff;
+  background: #e7f3ff;
 }
