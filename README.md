@@ -4,6 +4,9 @@ Badge Maker is a web application that allows users to draw shapes and text on a 
 
 [Live DEMO](https://mikhail-angelov.github.io/badge-maker/src/)
 
+## Example
+![image](https://github.com/user-attachments/assets/1bcfa03f-8ce3-4530-b684-b92bf2c8b910)
+
 ## Features
 
 - Draw shapes (rectangle, circle) and text on a canvas
