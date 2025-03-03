@@ -331,6 +331,56 @@ class Store {
       this.notify();
     }
   }
+  copySelectedObjects() {
+    if (this.selectedObjectsIds.length === 0) {
+      alert("No objects to copy");
+      return;
+    }
+    const copiedObjects = this.objects.filter((object) =>
+      this.selectedObjectsIds.includes(object.id)
+    );
+    this.copiedObjects = copiedObjects.map((object) => {
+      const id = Date.now();
+      return {
+        id,
+        type: object.type,
+        properties: { ...object.properties, x: object.properties.x + 10 },
+      };
+    });
+  }
+  pastCopiedObjects() {
+    if (!this.copiedObjects) {
+      alert("No objects to paste");
+      return;
+    }
+    this.objects = [...this.objects, ...this.loadObjects(this.copiedObjects)];
+    this.saveAllObjects();
+    this.pushToHistory("add");
+    this.notify();
+  }
+  moveActiveObject({ direction, shiftKey }) {
+    if (!this.activeObject) {
+      return;
+    }
+    const { x, y } = this.activeObject.properties;
+    const step = shiftKey ? 10 : 1;
+    switch (direction) {
+      case "ArrowUp":
+        this.updateActiveObjectProps(this.activeObject.id, { y: y - step });
+        break;
+      case "ArrowDown":
+        this.updateActiveObjectProps(this.activeObject.id, { y: y + step });
+        break;
+      case "ArrowLeft":
+        this.updateActiveObjectProps(this.activeObject.id, { x: x - step });
+        break;
+      case "ArrowRight":
+        this.updateActiveObjectProps(this.activeObject.id, { x: x + step });
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 export default Store;

@@ -129,6 +129,12 @@ class PropertiesPanel {
           .addEventListener("click", () => {
             this.openFontSelectorModal(value, this.tempProperties.text);
           });
+      } else if (type === "image") {
+        const value = this.tempProperties.imageSrc || "";
+        propertyElement.innerHTML = `
+        <label class="label">${prop}</label>
+        <img src="${value}" alt="image" width="150">
+      `;
       }
       form.appendChild(propertyElement);
     }
@@ -148,7 +154,7 @@ class PropertiesPanel {
         this.store.removeObject(activeObject.id);
       }
     });
-    
+
     const toFrontButton = this.container.querySelector("#to-front");
     toFrontButton.addEventListener("click", () => {
       this.store.moveToFront(activeObject.id);

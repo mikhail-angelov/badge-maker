@@ -43,6 +43,26 @@ class App {
     });
 
     document.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "c") {
+        this.store.copySelectedObjects();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+        this.store.pastCopiedObjects();
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        this.store.moveActiveObject({
+          direction: event.key,
+          shiftKey: event.shiftKey,
+        });
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
       if (
         event.ctrlKey &&
         (event.key === "Delete" || event.key === "Backspace")

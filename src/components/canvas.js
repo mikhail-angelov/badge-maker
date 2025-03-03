@@ -54,21 +54,39 @@ class Canvas {
       newShapePlaceholder.y = y;
     } else {
       const objects = this.store.getObjects();
+      let clickedObjects = [];
       // reverse loop to get the top object first
       for (let i = objects.length - 1; i >= 0; i--) {
         const object = objects[i];
         if (shaper.isPointInShapeSpot(x, y, object)) {
           this.isSizing = shaper.isPointInShapeSpot(x, y, object);
           break;
-        } else if (shaper.isPointInShape(x, y, object) && !event.shiftKey) {
-          this.isDragging = true;
+        } else if (shaper.isPointInShape(x, y, object)) {
+          clickedObjects.push(object);
+        }
+      }
+
+      if (clickedObjects.length > 0) {
+        if (clickedObjects.length > 1) {
+          // Rotate through the clicked objects
+          const currentIndex = clickedObjects.findIndex(
+            (obj) => obj.id === this.store.getActiveObject()?.id
+          );
+          const nextIndex = (currentIndex + 1) % clickedObjects.length;
+          const nextObject = clickedObjects[nextIndex];
+          this.store.setActiveObject(nextObject, {
+            offsetX: x - nextObject.properties.x,
+            offsetY: y - nextObject.properties.y,
+          });
+        } else {
+          const object = clickedObjects[0];
           this.store.setActiveObject(object, {
             offsetX: x - object.properties.x,
             offsetY: y - object.properties.y,
           });
-          this.setCursor("grabbing");
-          break;
         }
+        this.isDragging = true;
+        this.setCursor("grabbing");
       }
     }
   }
@@ -127,7 +145,7 @@ class Canvas {
     let clicked = false;
     for (let i = objects.length - 1; i >= 0; i--) {
       const object = objects[i];
-      if (shaper.isPointInShape(x, y, object)) {
+      if (shaper.isPointInShape(x, y, object) && !selectedObjectsIds.includes(object.id)) {
         if (event.shiftKey) {
           this.store.toggleObjectSelection(object.id);
         }

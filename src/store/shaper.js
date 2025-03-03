@@ -21,7 +21,7 @@ const shapePropertiesMap = {
     y: "number",
     width: "number",
     height: "number",
-    imageSrc: "text",
+    imageSrc: "image",
   },
   ["text"]: {
     x: "number",

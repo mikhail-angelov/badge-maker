@@ -63,18 +63,6 @@ h2.title {
   color: red;
 }
 
-/* #canvas-container {
-  width: 60%;
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background-color: #fff;
-}
-
-#canvas {
-  border: 1px solid #000;
-} */
 #canvas-container {
   display: flex;
   flex-grow: 1;
@@ -120,7 +108,7 @@ input[type="number"] {
 }
 
 #properties-panel .row {
-  height: 32px;
+  margin: 5px 0;
   align-items: center;
 }
 
