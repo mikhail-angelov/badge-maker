@@ -145,8 +145,8 @@ class Canvas {
     let clicked = false;
     for (let i = objects.length - 1; i >= 0; i--) {
       const object = objects[i];
-      if (shaper.isPointInShape(x, y, object) && !selectedObjectsIds.includes(object.id)) {
-        if (event.shiftKey) {
+      if (shaper.isPointInShape(x, y, object) ) {
+        if (event.shiftKey && !selectedObjectsIds.includes(object.id)) {
           this.store.toggleObjectSelection(object.id);
         }
         clicked = true;

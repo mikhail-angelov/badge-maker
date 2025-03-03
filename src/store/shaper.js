@@ -229,7 +229,7 @@ const renderOutline = (context, rect, withoutSpots) => {
   // Draw the light blue outline
   context.strokeStyle = withoutSpots ? "orange" : "lightblue";
   context.lineWidth = 2;
-  if(withoutSpots){
+  if (withoutSpots) {
     context.setLineDash([14, 15]);
   }
   context.strokeRect(x, y, width, height);
@@ -416,7 +416,7 @@ const drawShape = ({ context, shape }) => {
     renderMap[shape.type](context, shape);
     context.restore();
   } catch (e) {
-    console.log("Error drawing shape", shape, e);
+    console.error("Error drawing shape", shape, e);
   }
 };
 
@@ -426,7 +426,7 @@ const drawOutline = ({ context, shape, scale, withoutSpots }) => {
     renderOutlineMap[shape.type](context, shape, scale, withoutSpots);
     context.restore();
   } catch (e) {
-    console.log("Error drawing outline", shape, e);
+    console.error("Error drawing outline", shape, e);
   }
 };
 
@@ -434,7 +434,7 @@ const updateShapeOnMouseEvent = (shape, event, point) => {
   try {
     updateShapeMap[shape.type](shape, event, point);
   } catch (e) {
-    console.log("Error drawing outline", shape, e);
+    console.error("Error drawing outline", shape, e);
   }
 };
 
@@ -449,7 +449,7 @@ const isPointInShape = (x, y, shape) => {
     } = shapeBoxMap[shape.type](shape.properties);
     return x >= objX && x <= objX + width && y >= objY && y <= objY + height;
   } catch (e) {
-    console.log("Error checking point in shape", shape, e);
+    console.error("Error checking point in shape", shape, e);
     return false;
   }
 };
@@ -490,14 +490,12 @@ const isPointInShapeSpot = (x, y, shape) => {
 
     return null;
   } catch (e) {
-    console.log("Error checking point in shape spot", shape, e);
+    console.error("Error checking point in shape spot", shape, e);
     return null;
   }
 };
 
 const alignObjects = (objects, alignment) => {
-  // Implement the logic for align based on the alignment parameter
-  console.log(`Align called with alignment: ${alignment}`);
   if (alignment === "center-horizontal") {
     // Calculate the average horizontal center x coordinate
     const totalCenterX = objects.reduce((sum, object) => {

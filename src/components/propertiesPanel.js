@@ -64,10 +64,10 @@ class PropertiesPanel {
       </div>
       <div class="row">
         <button id="to-front">To Front</button>
-        <p>&nbsp;&nbsp;</p>
+        <div>&nbsp;&nbsp;</div>
         <button id="to-back">To Back</button>
       </div>
-      <form id="properties">
+      <form class="column" id="properties">
       <p class="type">Type: <b>${activeObject.type}</b></p>
       </form>
     `;

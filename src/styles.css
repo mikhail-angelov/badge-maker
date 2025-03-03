@@ -15,7 +15,6 @@ html {
 .column {
   display: flex;
   flex-direction: column;
-  padding: 10px;
 }
 .row {
   display: flex;
@@ -108,7 +107,7 @@ input[type="number"] {
 }
 
 #properties-panel .row {
-  margin: 5px 0;
+  margin: 3px 0;
   align-items: center;
 }
 

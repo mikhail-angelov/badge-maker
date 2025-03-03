@@ -38,7 +38,6 @@ class IndexedDB {
       const request = store.put(object);
 
       request.onsuccess = () => {
-        console.log(`Object with id ${object.id} saved successfully.`);
         resolve();
       };
 
@@ -83,7 +82,6 @@ class IndexedDB {
       const request = store.delete(id);
 
       request.onsuccess = () => {
-        console.log(`Object with id ${id} deleted successfully.`);
         resolve();
       };
 
@@ -104,7 +102,6 @@ class IndexedDB {
       const request = store.clear();
 
       request.onsuccess = () => {
-        console.log("All objects deleted successfully.");
         resolve();
       };
 

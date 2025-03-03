@@ -21,7 +21,6 @@ class Footer {
       square.addEventListener("click", () => {
         const effectiveIndex =
           history.length > 20 ? history.length - 20 + index : index;
-        console.log("restore", effectiveIndex);
         this.store.restoreFromHistory(effectiveIndex);
       });
       this.container.appendChild(square);

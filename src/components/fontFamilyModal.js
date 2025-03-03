@@ -112,7 +112,6 @@ export class FontFamilyModal {
     this.container.querySelectorAll(".font-item").forEach((item) => {
       item.addEventListener("click", (event) => {
         const font = event.target.dataset.font;
-        console.log("font", font);
         this.onClose(font);
       });
     });
