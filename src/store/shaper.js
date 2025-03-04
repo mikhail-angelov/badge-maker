@@ -453,6 +453,27 @@ const isPointInShape = (x, y, shape) => {
     return false;
   }
 };
+const isShapeInRect = (shape, rect) => {
+  if (!shape) return false;
+  try {
+    const {
+      x: objX,
+      y: objY,
+      width: objWidth,
+      height: objHeight,
+    } = shapeBoxMap[shape.type](shape.properties);
+    const { x, y, width, height } = rect;
+    return (
+      objX >= x &&
+      objX + objWidth <= x + width &&
+      objY >= y &&
+      objY + objHeight <= y + height
+    );
+  } catch (e) {
+    console.error("Error checking point in shape", shape, e);
+    return false;
+  }
+};
 
 const isPointInShapeSpot = (x, y, shape) => {
   if (!shape) return null;
@@ -591,5 +612,6 @@ export default {
   updateShapeOnMouseEvent,
   alignObjects,
   isPointInShape,
+  isShapeInRect,
   isPointInShapeSpot,
 };

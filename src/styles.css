@@ -72,6 +72,9 @@ h2.title {
 #canvas {
   position: absolute;
 }
+#canvas:active {
+  border: 0;
+}
 
 #tool-panel {
   position: absolute;

@@ -31,10 +31,10 @@ class App {
   }
 
   setupEventListeners() {
-    document.getElementById("export-png").addEventListener("click", () => {
-      this.canvas.exportAsPNG();
-    });
-
+    document
+      .getElementById("export-png")
+      .addEventListener("click", () => this.canvas.exportAsPNG());
+    window.addEventListener("resize", () => this.canvas.handleResize());
   }
 
   render() {

@@ -13,6 +13,7 @@ class Canvas {
 
     this.isDragging = false;
     this.isSizing = "";
+    this.selection = null;
 
     this.canvas.addEventListener("click", this.handleCanvasClick.bind(this));
     this.canvas.addEventListener("mousedown", this.handleMouseDown.bind(this));
@@ -20,36 +21,33 @@ class Canvas {
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
 
+    // Add focus to the canvas when clicked
+    this.canvas.addEventListener("click", () => {
+      this.canvas.focus();
+    });
 
     this.canvas.addEventListener("keydown", (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "z") {
         this.store.restoreFromHistory(this.store.getHistory().length - 2);
         this.render();
       }
-    });
-
-    this.canvas.addEventListener("keydown", (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "c") {
         this.store.copySelectedObjects();
       }
-    });
-
-    this.canvas.addEventListener("keydown", (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "v") {
         this.store.pastCopiedObjects();
       }
-    });
-    this.canvas.addEventListener("keydown", (event) => {
-      console.log(event.key);
-      if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      if (
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown" ||
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight"
+      ) {
         this.store.moveActiveObject({
           direction: event.key,
           shiftKey: event.shiftKey,
         });
       }
-    });
-
-    this.canvas.addEventListener("keydown", (event) => {
       if (
         event.ctrlKey &&
         (event.key === "Delete" || event.key === "Backspace")
@@ -60,17 +58,13 @@ class Canvas {
           this.store.removeObject(activeObject.id);
         }
       }
-    });
-    this.canvas.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         this.store.clearNewShapePlaceholder();
-        this.store.clearDraggedObject();
-        this.store.clearSelectedObjects();
+        this.store.cleanAllSelections();
         this.canvas.setCursor("default");
       }
     });
 
-    window.addEventListener("resize", this.handleResize.bind(this));
     this.handleResize();
   }
 
@@ -98,6 +92,10 @@ class Canvas {
     const { x, y } = this.getMousePosition(event);
     const newShapePlaceholder = this.store.getNewShapePlaceholder();
 
+    if (event.shiftKey) {
+      return;
+    }
+
     if (newShapePlaceholder) {
       this.isDragging = true;
       newShapePlaceholder.x = x;
@@ -110,7 +108,7 @@ class Canvas {
         const object = objects[i];
         if (shaper.isPointInShapeSpot(x, y, object)) {
           this.isSizing = shaper.isPointInShapeSpot(x, y, object);
-          break;
+          return;
         } else if (shaper.isPointInShape(x, y, object)) {
           clickedObjects.push(object);
         }
@@ -137,6 +135,11 @@ class Canvas {
         }
         this.isDragging = true;
         this.setCursor("grabbing");
+      } else {
+        this.selection = { x1: x, y1: y, x2: x, y2: y };
+      }
+      if (clickedObjects.length === 0 && !this.isSizing) {
+        this.store.cleanAllSelections();
       }
     }
   }
@@ -144,7 +147,7 @@ class Canvas {
   handleMouseMove(event) {
     const activeObject = this.store.getActiveObject();
     const newShapePlaceholder = this.store.getNewShapePlaceholder();
-    if (!activeObject && !newShapePlaceholder) {
+    if (!activeObject && !newShapePlaceholder && !this.selection) {
       return;
     }
     const { x, y } = this.getMousePosition(event);
@@ -152,6 +155,10 @@ class Canvas {
     if (newShapePlaceholder) {
       newShapePlaceholder.width = x - newShapePlaceholder.x;
       newShapePlaceholder.height = y - newShapePlaceholder.y;
+      this.scheduleRender();
+    } else if (this.selection) {
+      this.selection.x2 = x;
+      this.selection.y2 = y;
       this.scheduleRender();
     } else if (activeObject) {
       if (this.isDragging) {
@@ -181,10 +188,14 @@ class Canvas {
     } else if ((this.isDragging || this.isSizing) && activeObject) {
       const { id, properties } = activeObject;
       this.store.updateActiveObjectProps(id, properties);
+    } else if (this.selection) {
+      this.store.selectedObjectsInRect(this.selection);
     }
+
     this.setCursor("default");
     this.isDragging = false;
     this.isSizing = "";
+    this.selection = null;
     this.store.clearNewShapePlaceholder();
   }
 
@@ -192,19 +203,13 @@ class Canvas {
     const { x, y } = this.getMousePosition(event);
     const objects = this.store.getObjects();
     const selectedObjectsIds = this.store.getSelectedObjectIds();
-    let clicked = false;
-    for (let i = objects.length - 1; i >= 0; i--) {
-      const object = objects[i];
-      if (shaper.isPointInShape(x, y, object) ) {
-        if (event.shiftKey && !selectedObjectsIds.includes(object.id)) {
+    if (event.shiftKey) {
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const object = objects[i];
+        if (shaper.isPointInShape(x, y, object)) {
           this.store.toggleObjectSelection(object.id);
         }
-        clicked = true;
-        break;
       }
-    }
-    if (!clicked && selectedObjectsIds.length > 0) {
-      this.store.cleanAllSelections();
     }
   }
 
@@ -273,6 +278,9 @@ class Canvas {
     if (newShapePlaceholder) {
       this.drawNewShape(newShapePlaceholder);
     }
+    if (this.selection) {
+      this.drawSelectionRectangle();
+    }
     this.context.restore();
   }
 
@@ -280,6 +288,18 @@ class Canvas {
     this.context.strokeStyle = "lightblue";
     this.context.lineWidth = 1;
     this.context.strokeRect(x, y, width, height);
+  }
+
+  drawSelectionRectangle() {
+    const { x1, y1, x2, y2 } = this.selection;
+    const width = x2 - x1;
+    const height = y2 - y1;
+
+    this.context.strokeStyle = "blue";
+    this.context.lineWidth = 1;
+    this.context.setLineDash([5, 5]);
+    this.context.strokeRect(x1, y1, width, height);
+    this.context.setLineDash([]);
   }
 
   clear() {
