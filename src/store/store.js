@@ -55,7 +55,7 @@ class Store {
   }
   async saveAllObjects() {
     try {
-      await this.saveObjects(this.objects);
+      await this.db.saveObjects(objects);
     } catch (error) {
       console.error(`Error saving all objects:`, error);
     }

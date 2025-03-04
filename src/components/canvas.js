@@ -20,6 +20,56 @@ class Canvas {
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
 
+
+    this.canvas.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "z") {
+        this.store.restoreFromHistory(this.store.getHistory().length - 2);
+        this.render();
+      }
+    });
+
+    this.canvas.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "c") {
+        this.store.copySelectedObjects();
+      }
+    });
+
+    this.canvas.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+        this.store.pastCopiedObjects();
+      }
+    });
+    this.canvas.addEventListener("keydown", (event) => {
+      console.log(event.key);
+      if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        this.store.moveActiveObject({
+          direction: event.key,
+          shiftKey: event.shiftKey,
+        });
+      }
+    });
+
+    this.canvas.addEventListener("keydown", (event) => {
+      if (
+        event.ctrlKey &&
+        (event.key === "Delete" || event.key === "Backspace")
+      ) {
+        event.preventDefault();
+        const activeObject = this.store.getActiveObject();
+        if (activeObject) {
+          this.store.removeObject(activeObject.id);
+        }
+      }
+    });
+    this.canvas.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        this.store.clearNewShapePlaceholder();
+        this.store.clearDraggedObject();
+        this.store.clearSelectedObjects();
+        this.canvas.setCursor("default");
+      }
+    });
+
     window.addEventListener("resize", this.handleResize.bind(this));
     this.handleResize();
   }

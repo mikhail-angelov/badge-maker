@@ -1,7 +1,8 @@
+const LIMIT_VISIBLE_HISTORY = 40;
 class Footer {
-  constructor(container, store) {
+  constructor(footer, store) {
     this.store = store;
-    this.container = container;
+    this.container = footer.querySelector('#history');
     this.store.subscribe(this.render.bind(this));
     this.render();
   }
@@ -10,7 +11,7 @@ class Footer {
     this.container.innerHTML = "";
     const history = this.store.getHistory();
     const historyIndex = this.store.getHistoryIndex();
-    const recentHistory = history.slice(-20);
+    const recentHistory = history.slice(-LIMIT_VISIBLE_HISTORY);
 
     recentHistory.forEach((entry, index) => {
       const square = document.createElement("div");
@@ -20,7 +21,9 @@ class Footer {
       square.title = `Action: ${entry.action}`;
       square.addEventListener("click", () => {
         const effectiveIndex =
-          history.length > 20 ? history.length - 20 + index : index;
+          history.length > LIMIT_VISIBLE_HISTORY
+            ? history.length - LIMIT_VISIBLE_HISTORY + index
+            : index;
         this.store.restoreFromHistory(effectiveIndex);
       });
       this.container.appendChild(square);
