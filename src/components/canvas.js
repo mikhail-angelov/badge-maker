@@ -6,8 +6,6 @@ class Canvas {
     this.store.subscribe(this.scheduleRender.bind(this));
     this.canvas = canvasElement;
     this.context = this.canvas.getContext("2d");
-    this.canvas.width = 800;
-    this.canvas.height = 600;
     this.scale = 1;
     this.renderScheduled = false;
 
@@ -20,49 +18,11 @@ class Canvas {
     this.canvas.addEventListener("mousemove", this.handleMouseMove.bind(this));
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
+    this.canvas.addEventListener("keydown", this.handleKeyDown.bind(this));
 
     // Add focus to the canvas when clicked
     this.canvas.addEventListener("click", () => {
       this.canvas.focus();
-    });
-
-    this.canvas.addEventListener("keydown", (event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === "z") {
-        this.store.restoreFromHistory(this.store.getHistory().length - 2);
-        this.render();
-      }
-      if ((event.ctrlKey || event.metaKey) && event.key === "c") {
-        this.store.copySelectedObjects();
-      }
-      if ((event.ctrlKey || event.metaKey) && event.key === "v") {
-        this.store.pastCopiedObjects();
-      }
-      if (
-        event.key === "ArrowUp" ||
-        event.key === "ArrowDown" ||
-        event.key === "ArrowLeft" ||
-        event.key === "ArrowRight"
-      ) {
-        this.store.moveActiveObject({
-          direction: event.key,
-          shiftKey: event.shiftKey,
-        });
-      }
-      if (
-        event.ctrlKey &&
-        (event.key === "Delete" || event.key === "Backspace")
-      ) {
-        event.preventDefault();
-        const activeObject = this.store.getActiveObject();
-        if (activeObject) {
-          this.store.removeObject(activeObject.id);
-        }
-      }
-      if (event.key === "Escape") {
-        this.store.clearNewShapePlaceholder();
-        this.store.cleanAllSelections();
-        this.canvas.setCursor("default");
-      }
     });
 
     this.handleResize();
@@ -227,6 +187,42 @@ class Canvas {
     this.scheduleRender();
   }
 
+  handleKeyDown(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === "z") {
+      this.store.restoreFromHistory(this.store.getHistory().length - 2);
+      this.render();
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key === "c") {
+      this.store.copySelectedObjects();
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+      this.store.pastCopiedObjects();
+    }
+    if (
+      event.key === "ArrowUp" ||
+      event.key === "ArrowDown" ||
+      event.key === "ArrowLeft" ||
+      event.key === "ArrowRight"
+    ) {
+      this.store.moveActiveObject({
+        direction: event.key,
+        shiftKey: event.shiftKey,
+      });
+    }
+    if (event.key === "Delete" || event.key === "Backspace"){
+      event.preventDefault();
+      const activeObject = this.store.getActiveObject();
+      if (activeObject) {
+        this.store.removeObject(activeObject.id);
+      }
+    }
+    if (event.key === "Escape") {
+      this.store.clearNewShapePlaceholder();
+      this.store.cleanAllSelections();
+      this.canvas.setCursor("default");
+    }
+  }
+
   scheduleRender() {
     if (!this.renderScheduled) {
       this.renderScheduled = true;
@@ -238,7 +234,7 @@ class Canvas {
   }
 
   render() {
-    this.clear();
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.context.save();
     this.context.scale(this.scale, this.scale);
     const objects = this.store.getObjects();
@@ -300,10 +296,6 @@ class Canvas {
     this.context.setLineDash([5, 5]);
     this.context.strokeRect(x1, y1, width, height);
     this.context.setLineDash([]);
-  }
-
-  clear() {
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   setCursor(cursorType) {
