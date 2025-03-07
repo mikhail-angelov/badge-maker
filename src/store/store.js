@@ -1,20 +1,22 @@
 import shaper from "./shaper.js";
+import { Observable } from "./observable.js";
+import { ImmutablePersistedCollection } from './immutablePersistedCollection.js';
 
-class Shape {
+class Shape extends Observable{
   constructor(id, type, properties) {
     this.id = id;
     this.type = type;
     this.properties = properties;
   }
 }
-class Store {
+class Store extends Observable {
   constructor(db) {
+    super();
+    this.collection = new ImmutablePersistedCollection(db);
     this.objects = [];
-    this.listeners = [];
     this.history = [];
     this.historyIndex = -1;
     this.selectedObjectsIds = [];
-    this.db = db;
     this.activeObject = null;
     this.newShapePlaceholder = null;
 
@@ -23,9 +25,7 @@ class Store {
 
   async initDB() {
     try {
-      await this.db.initDB();
-      const objects = await this.db.loadObjects();
-      this.objects = this.loadObjects(objects);
+      this.objects = await this.collection.init();
       this.pushToHistory("update");
       this.notify();
     } catch (error) {
@@ -33,190 +33,41 @@ class Store {
     }
   }
 
-  loadObjects(objects) {
-    //load images
-    return objects.map((item) => {
-      if (item.type === "image") {
-        const image = new Image();
-        image.src = item.properties.imageSrc;
-        item.image = image;
-      }
-      return item;
-    });
-  }
-
-  async saveObject(object) {
-    try {
-      const { id, type, properties } = object;
-      await this.db.saveObject({ id, type, properties });
-    } catch (error) {
-      console.error(`Error saving object with id ${object.id}:`, error);
-    }
-  }
-  async saveAllObjects() {
-    try {
-      await this.db.saveObjects(objects);
-    } catch (error) {
-      console.error(`Error saving all objects:`, error);
-    }
-  }
-
-  async deleteObject(id) {
-    try {
-      await this.db.deleteObject(id);
-    } catch (error) {
-      console.error(`Error deleting object with id ${id}:`, error);
-    }
-  }
-  removeObject(objectId) {
-    this.objects = this.objects.filter((obj) => obj.id !== objectId);
-    this.deleteObject(objectId);
-    this.selectedObjectsIds = this.selectedObjectsIds.filter(
-      (obj) => obj.id !== objectId
-    );
-    this.activeObject = null;
-    this.pushToHistory("remove");
-    this.notify();
-  }
-
-  async clearObjects() {
-    try {
-      this.objects = [];
-      this.selectedObjectsIds = [];
-      await this.db.deleteAllObjects();
-      this.history = [];
-      this.historyIndex = -1;
-      this.notify();
-    } catch (error) {
-      console.error(`Error clearing all objects:`, error);
-    }
-  }
-
-  async replaceObjects(objects) {
-    try {
-      this.selectedObjectsIds = [];
-      await this.db.deleteAllObjects();
-      await this.db.saveObjects(objects);
-      this.objects = this.loadObjects(objects);
-      this.pushToHistory("update");
-      this.notify();
-    } catch (error) {
-      console.error(`Error replacing objects:`, error);
-    }
-  }
-
-  subscribe(listener) {
-    this.listeners.push(listener);
-  }
-
-  notify() {
-    if (this.notifyTimeout) {
-      clearTimeout(this.notifyTimeout);
-    }
-    this.notifyTimeout = setTimeout(() => {
-      this.listeners.forEach((listener) => listener(this.objects));
-      this.notifyTimeout = null;
-    }, 0);
-  }
-
-  addShape(type, properties) {
-    let shape;
-    const id = Date.now();
-
-    switch (type) {
-      case "rectangle":
-        shape = new Shape(id, "rectangle", {
-          x: 240,
-          y: 240,
-          width: 100,
-          height: 100,
-          color: "blue",
-          ...properties,
-        });
-        break;
-      case "image":
-        shape = new Shape(id, "image", {
-          x: 240,
-          y: 240,
-          width: 100,
-          height: 100,
-          ...properties,
-        });
-        //load image
-        const image = new Image();
-        image.src = shape.properties.imageSrc;
-        shape.image = image;
-        break;
-      case "circle":
-        shape = new Shape(id, "circle", {
-          x: properties.x + properties.width / 2,
-          y: properties.y + properties.height / 2,
-          radius: Math.min(properties.width, properties.height) / 2,
-          color: properties.color || "red",
-        });
-        break;
-      case "text":
-        shape = new Shape(id, "text", {
-          x: properties.x,
-          y: properties.y,
-          text: "lorem ipsum",
-          fontFamily: "Arial",
-          fontSize: 18,
-          color: properties.color || "black",
-          rotation: 0,
-        });
-        break;
-      case "circle-text":
-        shape = new Shape(id, "circle-text", {
-          x: properties.x + properties.width / 2,
-          y: properties.y + properties.height / 2,
-          radius: Math.min(properties.width, properties.height) / 2,
-          color: properties.color || "red",
-          text: "lorem ipsum",
-          fontFamily: "Arial",
-          fontSize: 18,
-          startAngle: 0,
-          kerning: 0,
-        });
-        break;
-      default:
-        throw new Error("Unknown shape type");
-    }
-
-    this.objects = [...this.objects, shape];
-    this.saveObject(shape);
+  async addShape(type, properties) {
+    const shape = createShape(type, properties); // Move shape creation to helper
+    this.objects = await this.collection.add(shape);
     this.pushToHistory("add");
     this.notify();
   }
 
-  updateActiveObjectProps(id, properties) {
-    if (!this.activeObject) {
-      return;
-    }
+  async updateActiveObjectProps(id, properties) {
+    if (!this.activeObject) return;
+    
     this.activeObject = {
       ...this.activeObject,
       properties: { ...this.activeObject.properties, ...properties },
     };
-    this.saveObject({ id, type: this.activeObject.type, properties });
-    this.objects = this.objects.map((obj) =>
-      obj.id === id
-        ? { ...obj, properties: { ...obj.properties, ...properties } }
-        : obj
-    );
+    
+    this.objects = await this.collection.update(id, {
+      type: this.activeObject.type,
+      properties: this.activeObject.properties
+    });
+    
     this.pushToHistory("update");
     this.notify();
   }
 
   pushToHistory(action) {
-    this.history.push({ action, items: [...this.objects] });
+    this.history.push({ action, items: this.objects });
     this.historyIndex = this.history.length - 1;
   }
   restoreFromHistory(index) {
     if (index >= 0 && index < this.history.length) {
       this.historyIndex = index;
       this.objects = this.history[index].items;
+      this.history = this.history.slice(0, index);
+      this.collection.replaceAll(this.objects);
       this.selectedObjectsIds = [];
-      this.saveAllObjects();
       this.notify();
     }
   }
@@ -280,52 +131,45 @@ class Store {
     this.notify();
   }
 
-  alignSelectedObjects(alignment) {
+  async alignSelectedObjects(alignment) {
     const selectedObjects = this.objects.filter((object) =>
       this.selectedObjectsIds.includes(object.id)
     );
     const updateObjects = shaper.alignObjects(selectedObjects, alignment);
-    this.objects = this.objects.map((obj) => {
-      const updateObject = updateObjects.find(
-        (updateObj) => updateObj.id === obj.id
-      );
-      if (updateObject) {
-        const o = { ...obj, properties: updateObject.properties };
-        this.saveObject(o);
-        return o;
-      }
-      return obj;
-    });
+    await this.collection.updateMany(updateObjects)
+    this.objects = this.collection.getAll();
 
     this.pushToHistory("update");
     this.notify();
   }
 
-  moveToFront(objectId) {
-    const index = this.objects.findIndex((obj) => obj.id === objectId);
-    if (index > -1) {
-      const object = this.objects[index];
-      this.objects = [
-        ...this.objects.slice(0, index),
-        ...this.objects.slice(index + 1),
-        object,
-      ];
-      this.notify();
+  async moveToFront(objectId) {
+      const index = this.objects.findIndex((obj) => obj.id === objectId);
+      if (index > -1) {
+        const object = this.objects[index];
+        const reorderedObjects = [
+          ...this.objects.slice(0, index),
+          ...this.objects.slice(index + 1),
+          object,
+        ];
+        this.objects = await this.collection.replace(reorderedObjects);
+        this.notify();
+      }
     }
-  }
-
-  moveToBack(objectId) {
-    const index = this.objects.findIndex((obj) => obj.id === objectId);
-    if (index > -1) {
-      const object = this.objects[index];
-      this.objects = [
-        object,
-        ...this.objects.slice(0, index),
-        ...this.objects.slice(index + 1),
-      ];
-      this.notify();
+  
+    async moveToBack(objectId) {
+      const index = this.objects.findIndex((obj) => obj.id === objectId);
+      if (index > -1) {
+        const object = this.objects[index];
+        const reorderedObjects = [
+          object,
+          ...this.objects.slice(0, index),
+          ...this.objects.slice(index + 1),
+        ];
+        this.objects = await this.collection.replace(reorderedObjects);
+        this.notify();
+      }
     }
-  }
   copySelectedObjects() {
     if (this.selectedObjectsIds.length === 0) {
       alert("No objects to copy");
@@ -334,24 +178,31 @@ class Store {
     const copiedObjects = this.objects.filter((object) =>
       this.selectedObjectsIds.includes(object.id)
     );
-    this.copiedObjects = copiedObjects.map((object) => {
-      const id = Date.now();
-      return {
-        id,
-        type: object.type,
-        properties: { ...object.properties, x: object.properties.x + 10 },
-      };
-    });
+    this.copiedObjects = copiedObjects.map((object) => ({
+      id: Date.now() + Math.random(), // Ensure unique IDs for multiple copies
+      type: object.type,
+      properties: { ...object.properties, x: object.properties.x + 10 },
+    }));
   }
-  pastCopiedObjects() {
+
+  async pasteCopiedObjects() {
     if (!this.copiedObjects) {
       alert("No objects to paste");
       return;
     }
-    this.objects = [...this.objects, ...this.loadObjects(this.copiedObjects)];
-    this.saveAllObjects();
-    this.pushToHistory("add");
-    this.notify();
+
+    const addPromises = this.copiedObjects.map(object => 
+      this.collection.add(object)
+    );
+    
+    try {
+      await Promise.all(addPromises);
+      this.objects = this.collection.getAll();
+      this.pushToHistory("add");
+      this.notify();
+    } catch (error) {
+      console.error("Error pasting objects:", error);
+    }
   }
   moveActiveObject({ direction, shiftKey }) {
     if (!this.activeObject) {
