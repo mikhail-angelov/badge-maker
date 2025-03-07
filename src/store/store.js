@@ -2,13 +2,6 @@ import shaper from "./shaper.js";
 import { Observable } from "./observable.js";
 import { ImmutablePersistedCollection } from './immutablePersistedCollection.js';
 
-class Shape extends Observable{
-  constructor(id, type, properties) {
-    this.id = id;
-    this.type = type;
-    this.properties = properties;
-  }
-}
 class Store extends Observable {
   constructor(db) {
     super();
@@ -27,17 +20,17 @@ class Store extends Observable {
     try {
       this.objects = await this.collection.init();
       this.pushToHistory("update");
-      this.notify();
+      super.emit('stateChange');
     } catch (error) {
       console.error("Error initializing database:", error);
     }
   }
 
   async addShape(type, properties) {
-    const shape = createShape(type, properties); // Move shape creation to helper
+    const shape = shaper.createShape(type, properties); // Move shape creation to helper
     this.objects = await this.collection.add(shape);
     this.pushToHistory("add");
-    this.notify();
+    super.emit('stateChange');
   }
 
   async updateActiveObjectProps(id, properties) {
@@ -54,7 +47,7 @@ class Store extends Observable {
     });
     
     this.pushToHistory("update");
-    this.notify();
+    super.emit('stateChange');
   }
 
   pushToHistory(action) {
@@ -65,10 +58,11 @@ class Store extends Observable {
     if (index >= 0 && index < this.history.length) {
       this.historyIndex = index;
       this.objects = this.history[index].items;
-      this.history = this.history.slice(0, index);
-      this.collection.replaceAll(this.objects);
+      this.history = this.history.slice(0, index + 1);
+      this.collection.replace(this.objects);
       this.selectedObjectsIds = [];
-      this.notify();
+      this.activeObject = null;
+      super.emit('stateChange');
     }
   }
 
@@ -97,7 +91,7 @@ class Store extends Observable {
     const activeObject = structuredClone({ id, type, properties });
     this.activeObject = { ...activeObject, ...rest, ...offset };
     this.toggleObjectSelection(object.id);
-    this.notify();
+    super.emit('stateChange');
   }
 
   getNewShapePlaceholder() {
@@ -106,12 +100,12 @@ class Store extends Observable {
 
   setNewShapePlaceholder(placeholder) {
     this.newShapePlaceholder = placeholder;
-    this.notify();
+    super.emit('stateChange');
   }
 
   clearNewShapePlaceholder() {
     this.newShapePlaceholder = null;
-    this.notify();
+    super.emit('stateChange');
   }
 
   toggleObjectSelection(id) {
@@ -122,13 +116,13 @@ class Store extends Observable {
         (item) => item !== id
       );
     }
-    this.notify();
+    super.emit('stateChange');
   }
 
   cleanAllSelections() {
     this.selectedObjectsIds = [];
     this.activeObject = null;
-    this.notify();
+    super.emit('stateChange');
   }
 
   async alignSelectedObjects(alignment) {
@@ -140,7 +134,7 @@ class Store extends Observable {
     this.objects = this.collection.getAll();
 
     this.pushToHistory("update");
-    this.notify();
+    super.emit('stateChange');
   }
 
   async moveToFront(objectId) {
@@ -153,7 +147,7 @@ class Store extends Observable {
           object,
         ];
         this.objects = await this.collection.replace(reorderedObjects);
-        this.notify();
+        super.emit('stateChange');
       }
     }
   
@@ -167,7 +161,7 @@ class Store extends Observable {
           ...this.objects.slice(index + 1),
         ];
         this.objects = await this.collection.replace(reorderedObjects);
-        this.notify();
+        super.emit('stateChange');
       }
     }
   copySelectedObjects() {
@@ -199,7 +193,7 @@ class Store extends Observable {
       await Promise.all(addPromises);
       this.objects = this.collection.getAll();
       this.pushToHistory("add");
-      this.notify();
+      super.emit('stateChange');
     } catch (error) {
       console.error("Error pasting objects:", error);
     }
@@ -245,7 +239,7 @@ class Store extends Observable {
           })
         )
         .map((object) => object.id);
-      this.notify();
+      super.emit('stateChange');
     } catch (e) {
       console.error("selectedObjectsInRect", e);
     }

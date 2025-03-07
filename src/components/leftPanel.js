@@ -2,7 +2,7 @@ class LeftPanel {
   constructor(container, store) {
     this.store = store;
     this.container = container;
-    this.store.subscribe(this.render.bind(this));
+    this.store.on('stateChange',this.render.bind(this));
 
     document
       .getElementById("clean-canvas")

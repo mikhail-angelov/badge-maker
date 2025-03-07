@@ -27,7 +27,7 @@ export class ImmutablePersistedCollection {
     });
   }
   async storeObject({id, type, properties}) {
-    return await this.storeObject({id, type, properties});
+    return await this.db.saveObject({id, type, properties});
   } 
 
   getAll() {
@@ -106,7 +106,7 @@ export class ImmutablePersistedCollection {
   async replace(newItems) {
     try {
       await this.db.deleteAllObjects();
-      await this.storeObjects(newItems);
+      await Promise.all(newItems.map((o) => this.storeObject(o)));
       this.items = Object.freeze(this.loadItems(newItems));
       return this.items;
     } catch (error) {

@@ -3,7 +3,7 @@ class Footer {
   constructor(footer, store) {
     this.store = store;
     this.container = footer.querySelector('#history');
-    this.store.subscribe(this.render.bind(this));
+    this.store.on('stateChange',this.render.bind(this));
     this.render();
   }
 

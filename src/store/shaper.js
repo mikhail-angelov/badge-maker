@@ -1,3 +1,11 @@
+class Shape{
+  constructor(id, type, properties) {
+    this.id = id;
+    this.type = type;
+    this.properties = properties;
+  }
+}
+
 const shapePropertiesMap = {
   ["rectangle"]: {
     x: "number",
@@ -605,12 +613,79 @@ const alignObjects = (objects, alignment) => {
   return objects;
 };
 
+const createShape = (type, properties) => {
+  let shape;
+  const id = Date.now();
+
+  switch (type) {
+    case "rectangle":
+      shape = new Shape(id, "rectangle", {
+        x: 240,
+        y: 240,
+        width: 100,
+        height: 100,
+        color: "blue",
+        ...properties,
+      });
+      break;
+    case "image":
+      shape = new Shape(id, "image", {
+        x: 240,
+        y: 240,
+        width: 100,
+        height: 100,
+        ...properties,
+      });
+      //load image
+      const image = new Image();
+      image.src = shape.properties.imageSrc;
+      shape.image = image;
+      break;
+    case "circle":
+      shape = new Shape(id, "circle", {
+        x: properties.x + properties.width / 2,
+        y: properties.y + properties.height / 2,
+        radius: Math.min(properties.width, properties.height) / 2,
+        color: properties.color || "red",
+      });
+      break;
+    case "text":
+      shape = new Shape(id, "text", {
+        x: properties.x,
+        y: properties.y,
+        text: "lorem ipsum",
+        fontFamily: "Arial",
+        fontSize: 18,
+        color: properties.color || "black",
+        rotation: 0,
+      });
+      break;
+    case "circle-text":
+      shape = new Shape(id, "circle-text", {
+        x: properties.x + properties.width / 2,
+        y: properties.y + properties.height / 2,
+        radius: Math.min(properties.width, properties.height) / 2,
+        color: properties.color || "red",
+        text: "lorem ipsum",
+        fontFamily: "Arial",
+        fontSize: 18,
+        startAngle: 0,
+        kerning: 0,
+      });
+      break;
+    default:
+      throw new Error("Unknown shape type");
+  }
+  return shape;
+};
+
 export default {
   shapePropertiesMap,
   drawShape,
   drawOutline,
   updateShapeOnMouseEvent,
   alignObjects,
+  createShape,
   isPointInShape,
   isShapeInRect,
   isPointInShapeSpot,

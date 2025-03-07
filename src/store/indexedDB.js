@@ -51,10 +51,6 @@ class IndexedDB {
     });
   }
 
-  saveObjects(objects) {
-    return Promise.all(objects.map((object) => this.saveObject(object)));
-  }
-
   loadObjects() {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction([this.storeName], "readonly");

@@ -6,7 +6,7 @@ class PropertiesPanel {
     this.store = store;
     this.container = container;
     this.tempProperties = {};
-    this.store.subscribe(this.render.bind(this));
+    this.store.on('stateChange',this.render.bind(this));
   }
 
   openFontSelectorModal(currentFont, text) {

@@ -3,7 +3,7 @@ import shaper from "../store/shaper.js";
 class Canvas {
   constructor(canvasElement, store) {
     this.store = store;
-    this.store.subscribe(this.scheduleRender.bind(this));
+    this.store.on('stateChange',this.scheduleRender.bind(this));
     this.canvas = canvasElement;
     this.context = this.canvas.getContext("2d");
     this.scale = 1;
