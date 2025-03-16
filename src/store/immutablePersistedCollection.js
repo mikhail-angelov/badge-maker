@@ -21,7 +21,7 @@ export class ImmutablePersistedCollection {
       if (item.type === "image") {
         const image = new Image();
         image.src = item.properties.imageSrc;
-        item.image = image;
+        return Object.freeze({ ...item, image});  
       }
       return Object.freeze(item);
     });

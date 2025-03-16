@@ -108,6 +108,11 @@ class Store extends Observable {
     super.emit('stateChange');
   }
 
+  async replaceObjects(objects) {
+    this.objects = await this.collection.replace(objects);
+    super.emit('stateChange');
+  }
+
   toggleObjectSelection(id) {
     if (!this.selectedObjectsIds.includes(id)) {
       this.selectedObjectsIds.push(id);

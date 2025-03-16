@@ -51,6 +51,37 @@ class IndexedDB {
     });
   }
 
+  saveObjects(objects) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([this.storeName], "readwrite");
+      const store = transaction.objectStore(this.storeName);
+      let errorOccurred = false;
+
+      transaction.oncomplete = () => {
+        if (!errorOccurred) {
+          resolve();
+        }
+      };
+
+      transaction.onerror = (event) => {
+        console.error("Error saving objects:", event.target.errorCode);
+        errorOccurred = true;
+        reject(event.target.errorCode);
+      };
+
+      objects.forEach((object) => {
+        const request = store.put(object);
+        request.onerror = (event) => {
+          console.error(
+            `Error saving object with id ${object.id}:`,
+            event.target.errorCode
+          );
+          errorOccurred = true;
+        };
+      });
+    });
+  }
+
   loadObjects() {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction([this.storeName], "readonly");
