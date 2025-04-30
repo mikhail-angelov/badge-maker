@@ -249,6 +249,17 @@ class Store extends Observable {
       console.error("selectedObjectsInRect", e);
     }
   }
+
+  async removeObject(objectId) {
+    this.objects = await this.collection.remove(objectId);
+    this.selectedObjectsIds = this.selectedObjectsIds.filter(
+      (obj) => obj.id !== objectId
+    );
+    this.activeObject = null;
+    this.pushToHistory("remove");
+    super.emit('stateChange');
+  }
+
 }
 
 export default Store;
