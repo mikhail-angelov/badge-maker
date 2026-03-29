@@ -1,7 +1,7 @@
 services:
   app:
-    image: ghcr.io/mikhail-angelov/badgemaker:latest
-    container_name: badgemaker
+    image: ghcr.io/mikhail-angelov/badge-maker:latest
+    container_name: badge-maker
     env_file:
       - ./.env
     ports:

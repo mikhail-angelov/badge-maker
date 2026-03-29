@@ -8,6 +8,6 @@ install:
 
 deploy:
 	@echo "Deploying server..."
-	ssh root@$(HOST) "docker pull ghcr.io/mikhail-angelov/badgemaker:latest"
+	ssh root@$(HOST) "docker pull ghcr.io/mikhail-angelov/badge-maker:latest"
 	-ssh root@$(HOST) "cd /opt/badge && docker compose down"
 	ssh root@$(HOST) "cd /opt/badge && docker compose up -d"
