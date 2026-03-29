@@ -190,13 +190,12 @@ class Canvas {
   handleKeyDown(event) {
     if ((event.ctrlKey || event.metaKey) && event.key === "z") {
       this.store.restoreFromHistory(this.store.getHistory().length - 2);
-      this.render();
     }
     if ((event.ctrlKey || event.metaKey) && event.key === "c") {
       this.store.copySelectedObjects();
     }
     if ((event.ctrlKey || event.metaKey) && event.key === "v") {
-      this.store.pastCopiedObjects();
+      this.store.pasteCopiedObjects();
     }
     if (
       event.key === "ArrowUp" ||

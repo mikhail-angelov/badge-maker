@@ -82,7 +82,7 @@ class PropertiesPanel {
       propertyElement.className = "row";
       if (type === "number" || type === "text") {
         const isNumber = type === "number";
-        const value = this.tempProperties[prop] || 0;
+        const value = this.tempProperties[prop] ?? (isNumber ? 0 : "");
         propertyElement.innerHTML = `
         <label class="label">${prop}</label>
         <input type="${

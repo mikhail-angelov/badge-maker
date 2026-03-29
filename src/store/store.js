@@ -16,6 +16,12 @@ class Store extends Observable {
     this.initDB();
   }
 
+  cloneObjects(objects = this.objects) {
+    return structuredClone(
+      objects.map(({ image, rect, ...object }) => object)
+    );
+  }
+
   async initDB() {
     try {
       this.objects = await this.collection.init();
@@ -51,15 +57,16 @@ class Store extends Observable {
   }
 
   pushToHistory(action) {
-    this.history.push({ action, items: this.objects });
+    this.history = this.history.slice(0, this.historyIndex + 1);
+    this.history.push({ action, items: this.cloneObjects() });
     this.historyIndex = this.history.length - 1;
   }
-  restoreFromHistory(index) {
+  async restoreFromHistory(index) {
     if (index >= 0 && index < this.history.length) {
+      const restoredObjects = this.cloneObjects(this.history[index].items);
       this.historyIndex = index;
-      this.objects = this.history[index].items;
+      this.objects = await this.collection.replace(restoredObjects);
       this.history = this.history.slice(0, index + 1);
-      this.collection.replace(this.objects);
       this.selectedObjectsIds = [];
       this.activeObject = null;
       super.emit('stateChange');
@@ -191,9 +198,8 @@ class Store extends Observable {
       this.selectedObjectsIds.includes(object.id)
     );
     this.copiedObjects = copiedObjects.map((object) => ({
-      id: Date.now() + Math.random(), // Ensure unique IDs for multiple copies
       type: object.type,
-      properties: { ...object.properties, x: object.properties.x + 10 },
+      properties: { ...object.properties },
     }));
   }
 
@@ -202,8 +208,17 @@ class Store extends Observable {
       alert("No objects to paste");
       return;
     }
+    const pastedObjects = this.copiedObjects.map((object) => ({
+      ...object,
+      id: Date.now() + Math.random(),
+      properties: {
+        ...object.properties,
+        x: (object.properties.x || 0) + 10,
+        y: (object.properties.y || 0) + 10,
+      },
+    }));
 
-    const addPromises = this.copiedObjects.map(object => 
+    const addPromises = pastedObjects.map(object => 
       this.collection.add(object)
     );
     

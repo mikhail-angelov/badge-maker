@@ -4,6 +4,14 @@ export class ImmutablePersistedCollection {
     this.items = Object.freeze([]);
   }
 
+  freezeItem(item) {
+    const nextItem = { ...item };
+    if (nextItem.properties) {
+      nextItem.properties = Object.freeze({ ...nextItem.properties });
+    }
+    return Object.freeze(nextItem);
+  }
+
   async init() {
     try {
       await this.db.initDB();
@@ -21,9 +29,9 @@ export class ImmutablePersistedCollection {
       if (item.type === "image") {
         const image = new Image();
         image.src = item.properties.imageSrc;
-        return Object.freeze({ ...item, image});  
+        return this.freezeItem({ ...item, image });
       }
-      return Object.freeze(item);
+      return this.freezeItem(item);
     });
   }
   async storeObject({id, type, properties}) {
@@ -37,7 +45,7 @@ export class ImmutablePersistedCollection {
   async add(item) {
     try {
       await this.storeObject(item);
-      this.items = Object.freeze([...this.items, Object.freeze(item)]);
+      this.items = Object.freeze([...this.items, this.freezeItem(item)]);
       return this.items;
     } catch (error) {
       console.error(`Error adding item:`, error);
@@ -50,7 +58,7 @@ export class ImmutablePersistedCollection {
       await this.storeObject({ id, ...updates });
       this.items = Object.freeze(
         this.items.map((item) =>
-          item.id === id ? Object.freeze({ ...item, ...updates }) : item
+          item.id === id ? this.freezeItem({ ...item, ...updates }) : item
         )
       );
       return this.items;
@@ -70,7 +78,7 @@ export class ImmutablePersistedCollection {
         this.items.map((item) => {
           const itemUpdates = updates.find(update => update.id === item.id);
           return itemUpdates 
-            ? Object.freeze({ ...item, ...itemUpdates })
+            ? this.freezeItem({ ...item, ...itemUpdates })
             : item;
         })
       );
