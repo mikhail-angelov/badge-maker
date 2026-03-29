@@ -80,14 +80,15 @@ class PropertiesPanel {
     for (const [prop, type] of Object.entries(shapeProperties)) {
       const propertyElement = document.createElement("div");
       propertyElement.className = "row";
+      const fieldId = `property-${activeObject.id}-${prop}`;
       if (type === "number" || type === "text") {
         const isNumber = type === "number";
         const value = this.tempProperties[prop] ?? (isNumber ? 0 : "");
         propertyElement.innerHTML = `
-        <label class="label">${prop}</label>
+        <label class="label" for="${fieldId}">${prop}</label>
         <input type="${
           isNumber ? "number" : "text"
-        }" value="${value}" data-key="${prop}" />
+        }" id="${fieldId}" name="${prop}" value="${value}" data-key="${prop}" />
       `;
         propertyElement
           .querySelector("input")
@@ -99,8 +100,8 @@ class PropertiesPanel {
       } else if (type === "color") {
         const value = this.tempProperties[prop] || "#000000";
         propertyElement.innerHTML = `
-        <label class="label">${prop}</label>
-        <input type="color" value="${value}" data-key="${prop}" />
+        <label class="label" for="${fieldId}">${prop}</label>
+        <input type="color" id="${fieldId}" name="${prop}" value="${value}" data-key="${prop}" />
       `;
         propertyElement
           .querySelector("input")
@@ -110,8 +111,8 @@ class PropertiesPanel {
       } else if (type === "boolean") {
         const value = this.tempProperties[prop] || false;
         propertyElement.innerHTML = `
-        <label class="label">${prop}</label>
-        <input type="checkbox" ${value ? "checked" : ""} data-key="${prop}" />
+        <label class="label" for="${fieldId}">${prop}</label>
+        <input type="checkbox" id="${fieldId}" name="${prop}" ${value ? "checked" : ""} data-key="${prop}" />
       `;
         propertyElement
           .querySelector("input")
@@ -121,8 +122,8 @@ class PropertiesPanel {
       } else if (type === "fontFamily") {
         const value = this.tempProperties[prop] || "Arial";
         propertyElement.innerHTML = `
-        <label class="label">${prop}</label>
-        <button type="button" class="font-family-button" data-key="${prop}">${value}</button>
+        <label class="label" for="${fieldId}">${prop}</label>
+        <button type="button" id="${fieldId}" class="font-family-button" data-key="${prop}">${value}</button>
       `;
         propertyElement
           .querySelector(".font-family-button")
