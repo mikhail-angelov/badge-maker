@@ -69,21 +69,6 @@ export class FontFamilyModal {
     ];
 
     this.render();
-
-    this.container.querySelectorAll(".font-item").forEach((item) => {
-      item.classList.toggle("selected", item.dataset.font === font);
-    });
-    this.container
-      .querySelector("#all-fonts")
-      .addEventListener("click", async () => {
-        try {
-          const allFonts = await queryLocalFonts();
-          this.fonts = allFonts.map((font) => font.family);
-          this.render();
-        } catch (error) {
-          console.error("error", error);
-        }
-      });
   }
 
   render() {
@@ -114,7 +99,23 @@ export class FontFamilyModal {
         const font = event.target.dataset.font;
         this.onClose(font);
       });
+      });
+
+    this.container.querySelectorAll(".font-item").forEach((item) => {
+      item.classList.toggle("selected", item.dataset.font === this.font);
     });
+
+    this.container
+      .querySelector("#all-fonts")
+      .addEventListener("click", async () => {
+        try {
+          const allFonts = await queryLocalFonts();
+          this.fonts = allFonts.map((font) => font.family);
+          this.render();
+        } catch (error) {
+          console.error("error", error);
+        }
+      });
 
     this.container
       .querySelector(".close-modal")

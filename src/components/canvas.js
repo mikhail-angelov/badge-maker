@@ -219,7 +219,7 @@ class Canvas {
     if (event.key === "Escape") {
       this.store.clearNewShapePlaceholder();
       this.store.cleanAllSelections();
-      this.canvas.setCursor("default");
+      this.setCursor("default");
     }
   }
 

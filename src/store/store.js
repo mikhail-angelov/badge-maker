@@ -110,6 +110,17 @@ class Store extends Observable {
 
   async replaceObjects(objects) {
     this.objects = await this.collection.replace(objects);
+    this.pushToHistory("update");
+    this.selectedObjectsIds = [];
+    this.activeObject = null;
+    super.emit('stateChange');
+  }
+
+  async clearObjects() {
+    this.objects = await this.collection.clear();
+    this.pushToHistory("remove");
+    this.selectedObjectsIds = [];
+    this.activeObject = null;
     super.emit('stateChange');
   }
 
@@ -152,6 +163,7 @@ class Store extends Observable {
           object,
         ];
         this.objects = await this.collection.replace(reorderedObjects);
+        this.pushToHistory("update");
         super.emit('stateChange');
       }
     }
@@ -166,6 +178,7 @@ class Store extends Observable {
           ...this.objects.slice(index + 1),
         ];
         this.objects = await this.collection.replace(reorderedObjects);
+        this.pushToHistory("update");
         super.emit('stateChange');
       }
     }
@@ -253,7 +266,7 @@ class Store extends Observable {
   async removeObject(objectId) {
     this.objects = await this.collection.remove(objectId);
     this.selectedObjectsIds = this.selectedObjectsIds.filter(
-      (obj) => obj.id !== objectId
+      (id) => id !== objectId
     );
     this.activeObject = null;
     this.pushToHistory("remove");

@@ -14,7 +14,7 @@ class PropertiesPanel {
     modalContainer.className = "modal-container";
     document.body.appendChild(modalContainer);
 
-    fontFamilyModal = new FontFamilyModal(
+    new FontFamilyModal(
       modalContainer,
       currentFont,
       text,
