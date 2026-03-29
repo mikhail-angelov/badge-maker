@@ -1,5 +1,29 @@
 import shaper from "../store/shaper.js";
 import { FontFamilyModal } from "./fontFamilyModal.js";
+import commands from "../core/commands/index.js";
+
+const COLOR_NAME_TO_HEX = {
+  black: "#000000",
+  white: "#ffffff",
+  red: "#ff0000",
+  blue: "#0000ff",
+  green: "#008000",
+  yellow: "#ffff00",
+  orange: "#ffa500",
+};
+
+const normalizeColorInputValue = (value) => {
+  if (typeof value !== "string") {
+    return "#000000";
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/i.test(normalized)) {
+    return normalized;
+  }
+
+  return COLOR_NAME_TO_HEX[normalized] || "#000000";
+};
 
 class PropertiesPanel {
   constructor(container, store) {
@@ -22,10 +46,11 @@ class PropertiesPanel {
         if (font) {
           const activeObject = this.store.getActiveObject();
           this.tempProperties.fontFamily = font;
-          this.store.updateActiveObjectProps(
-            activeObject.id,
-            this.tempProperties
-          );
+          commands.updateObjectCommand({
+            store: this.store,
+            objectId: activeObject.id,
+            properties: this.tempProperties,
+          });
         }
         document.body.removeChild(modalContainer);
       }
@@ -50,7 +75,11 @@ class PropertiesPanel {
     this.container.querySelectorAll(".justify-button").forEach((button) => {
       button.addEventListener("click", (event) => {
         const alignment = event.target.dataset.align;
-        this.store.alignSelectedObjects(alignment);
+        commands.alignObjectsCommand({
+          store: this.store,
+          objectIds: selectedObjectsIds,
+          alignment,
+        });
       });
     });
   }
@@ -98,7 +127,7 @@ class PropertiesPanel {
               : event.target.value;
           });
       } else if (type === "color") {
-        const value = this.tempProperties[prop] || "#000000";
+        const value = normalizeColorInputValue(this.tempProperties[prop]);
         propertyElement.innerHTML = `
         <label class="label" for="${fieldId}">${prop}</label>
         <input type="color" id="${fieldId}" name="${prop}" value="${value}" data-key="${prop}" />
@@ -146,24 +175,37 @@ class PropertiesPanel {
     form.appendChild(applyButton);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      this.store.updateActiveObjectProps(activeObject.id, this.tempProperties);
+      commands.updateObjectCommand({
+        store: this.store,
+        objectId: activeObject.id,
+        properties: this.tempProperties,
+      });
     });
 
     const removeButton = this.container.querySelector("#remove-shape");
     removeButton.addEventListener("click", () => {
       if (activeObject) {
-        this.store.removeObject(activeObject.id);
+        commands.removeObjectCommand({
+          store: this.store,
+          objectId: activeObject.id,
+        });
       }
     });
 
     const toFrontButton = this.container.querySelector("#to-front");
     toFrontButton.addEventListener("click", () => {
-      this.store.moveToFront(activeObject.id);
+      commands.moveToFrontCommand({
+        store: this.store,
+        objectId: activeObject.id,
+      });
     });
 
     const toBackButton = this.container.querySelector("#to-back");
     toBackButton.addEventListener("click", () => {
-      this.store.moveToBack(activeObject.id);
+      commands.moveToBackCommand({
+        store: this.store,
+        objectId: activeObject.id,
+      });
     });
   }
 

@@ -1,67 +1,80 @@
 # Badge Maker
 
-Badge Maker is a web application that allows users to draw shapes and text on a canvas, manage the objects, and export the canvas as a PNG file. The application is built using pure JavaScript and IndexedDB for persistent storage.
+Badge Maker is a local-first canvas editor for badge layouts with an AI planning mode. The editor runs in the browser, stores document state in IndexedDB, and can preview/apply Deepseek-generated badge scenarios through the same command layer used by the manual UI.
 
-[Live DEMO](https://mikhail-angelov.github.io/badge-maker/src/)
+## Current Capabilities
 
-## Example
-![image](https://github.com/user-attachments/assets/1bcfa03f-8ce3-4530-b684-b92bf2c8b910)
+- client-only badge editing in `index.html`
+- AI mode in `ai.html`
+- deterministic scenario validation and batch execution
+- single-step undo for multi-action AI applies
+- role-label based refinement prompts
+- curved text fitting between circles
+- separate SVG icon generation request for badge symbols
+- strict SVG sanitization before image placement
+- AI-generated shapes, text, and SVGs forced to black output
 
-## Features
+## Runtime Model
 
-- Draw shapes (rectangle, circle) and text on a canvas
-- Manage objects (add, remove, update properties)
-- Export the canvas as a PNG file
-- Persistent storage using IndexedDB
-- Zoom in and out using mouse wheel
-- Align and justify multiple selected objects
-- Move objects to front or back
-- Select font family for text objects
+- one Node ESM server in [`server/`](./server)
+- static UI served from [`src/`](./src)
+- Deepseek used for scenario planning
+- a separate Deepseek request used for symbolic SVG icon generation
+- IndexedDB used for local persistence in the browser
 
-## Installation
+## Requirements
 
-1. Clone the repository:
+Product requirements live in [`docs/prd.md`](./docs/prd.md).
 
-    ```sh
-    git clone https://github.com/yourusername/badge-maker.git
-    ```
+Implementation status lives in [`docs/plan.md`](./docs/plan.md) and [`docs/plan2.md`](./docs/plan2.md).
 
-2. Navigate to the project directory:
+## Setup
 
-    ```sh
-    cd badge-maker
-    ```
+1. Install dependencies if your environment needs them.
+2. Create a `.env` file with at least:
 
-3. Open `index.html` in your web browser to start the application.
+```env
+DEEPSEEK_API_KEY=your_key_here
+DEEPSEEK_MODEL=deepseek-chat
+```
 
-## Usage
+3. Start the server:
 
-- Click "Tool" buttons to add a new shape or text to the canvas.
-- Click on an object in the object list to select it and view its properties.
-- Update the properties of the selected object in the properties panel.
-- Click the "Remove" button to remove the selected object.
-- Use the mouse wheel to zoom in and out on the canvas.
-- Click the "Export PNG" button to save the canvas as a PNG file.
-- Use the alignment buttons to align or justify multiple selected objects.
-- Use the "To Front" and "To Back" buttons to change the z-order of objects.
-- Click the font family button to open a modal and select a font for text objects.
+```sh
+npm start
+```
+
+4. Open:
+
+- `http://127.0.0.1:3000/index.html` for client-only mode
+- `http://127.0.0.1:3000/ai.html` for AI mode
+
+## Scripts
+
+- `npm start` starts the server
+- `npm run dev` starts the server in watch mode
+- `npm test` runs the test suite
+
+## AI Notes
+
+- users always preview a plan before apply
+- scenario execution stays local
+- AI-generated text and shape colors are normalized to black
+- generated SVG icons are requested separately, sanitized, and embedded as `data:image/svg+xml`
+- SVG icon generation is free-form, not based on predefined icon enums
 
 ## Project Structure
 
-```plaintext
+```text
 badge-maker/
+├── docs/
+├── server/
 ├── src/
-│   ├── components/
-│   │   ├── canvas.js
-│   │   ├── fontFamilyModal.js
-│   │   ├── objectList.js
-│   │   ├── propertiesPanel.js
-│   │   ├── tool.js
-│   ├── store/
-│   │   ├── IndexedDB.js
-│   │   ├── shaper.js
-│   │   ├── store.js
-│   ├── index.html
-│   ├── styles.css
 │   ├── app.js
-├── README.md
+│   ├── app-ai.js
+│   ├── components/
+│   ├── core/
+│   └── store/
+├── tests/
+└── README.md
+```

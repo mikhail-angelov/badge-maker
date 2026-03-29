@@ -1,0 +1,46 @@
+services:
+  app:
+    image: ghcr.io/mikhail-angelov/badgemaker:latest
+    container_name: badgemaker
+    env_file:
+      - ./.env
+    ports:
+      - "127.0.0.1:3030:3000"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    command: npm start
+  monic-badgemaker:
+    image: ghcr.io/mikhail-angelov/monic:latest
+    container_name: monic-badgemaker
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - app
+    env_file:
+      - ./.env
+    environment:
+      - MONIC_APP_NAME=badgemakerMonitor
+
+      - MONIC_CHECK_SYSTEM_INTERVAL=60
+      - MONIC_CHECK_SYSTEM_CPU_THRESHOLD=80
+      - MONIC_CHECK_SYSTEM_MEMORY_THRESHOLD=85
+      - MONIC_CHECK_SYSTEM_DISK_THRESHOLD=90
+
+      - MONIC_CHECK_DOCKER_INTERVAL=60
+      - MONIC_CHECK_DOCKER_CONTAINERS=badgemaker
+
+      - MONIC_CHECK_HTTP_INTERVAL=300
+      - MONIC_CHECK_HTTP_URL=https://badg.bconf.com
+      - MONIC_CHECK_HTTP_METHOD=GET
+      - MONIC_CHECK_HTTP_TIMEOUT=10
+      - MONIC_CHECK_HTTP_EXPECTED_STATUS=200
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"

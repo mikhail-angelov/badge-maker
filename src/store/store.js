@@ -1,6 +1,7 @@
 import shaper from "./shaper.js";
 import { Observable } from "./observable.js";
 import { ImmutablePersistedCollection } from './immutablePersistedCollection.js';
+import { buildStateSummary } from "../core/roles/buildStateSummary.js";
 
 class Store extends Observable {
   constructor(db) {
@@ -22,6 +23,10 @@ class Store extends Observable {
     );
   }
 
+  createSnapshot() {
+    return this.cloneObjects();
+  }
+
   async initDB() {
     try {
       this.objects = await this.collection.init();
@@ -32,34 +37,35 @@ class Store extends Observable {
     }
   }
 
-  async addShape(type, properties) {
+  async addShape(type, properties, options = {}) {
     const shape = shaper.createShape(type, properties); // Move shape creation to helper
     this.objects = await this.collection.add(shape);
-    this.pushToHistory("add");
-    super.emit('stateChange');
+    if (options.recordHistory !== false) {
+      this.pushHistoryEntry(options.historyAction || "add");
+    }
+    if (options.emitStateChange !== false) {
+      super.emit('stateChange');
+    }
+    return shape;
   }
 
-  async updateActiveObjectProps(id, properties) {
-    if (!this.activeObject) return;
-    
-    this.activeObject = {
-      ...this.activeObject,
-      properties: { ...this.activeObject.properties, ...properties },
-    };
-    
-    this.objects = await this.collection.update(id, {
-      type: this.activeObject.type,
-      properties: this.activeObject.properties
-    });
-    
-    this.pushToHistory("update");
-    super.emit('stateChange');
+  async updateObjectProps(id, properties, options = {}) {
+    return this.updateObject(id, { properties }, options);
+  }
+
+  async updateActiveObjectProps(id, properties, options = {}) {
+    if (!this.activeObject) return null;
+    return this.updateObjectProps(id, properties, options);
+  }
+
+  pushHistoryEntry(action, items = this.createSnapshot()) {
+    this.history = this.history.slice(0, this.historyIndex + 1);
+    this.history.push({ action, items });
+    this.historyIndex = this.history.length - 1;
   }
 
   pushToHistory(action) {
-    this.history = this.history.slice(0, this.historyIndex + 1);
-    this.history.push({ action, items: this.cloneObjects() });
-    this.historyIndex = this.history.length - 1;
+    this.pushHistoryEntry(action);
   }
   async restoreFromHistory(index) {
     if (index >= 0 && index < this.history.length) {
@@ -92,12 +98,57 @@ class Store extends Observable {
     return this.activeObject;
   }
 
+  getObjectById(id) {
+    return this.objects.find((object) => object.id === id) || null;
+  }
+
+  getStateSummary() {
+    return buildStateSummary({
+      objects: this.objects,
+      selectedObjectIds: this.selectedObjectsIds,
+      activeObjectId: this.activeObject?.id || null,
+    });
+  }
+
+  syncActiveObject(id = this.activeObject?.id) {
+    if (!id) {
+      this.activeObject = null;
+      return;
+    }
+
+    const object = this.getObjectById(id);
+    if (!object) {
+      this.activeObject = null;
+      return;
+    }
+
+    const { properties, ...rest } = object;
+    this.activeObject = {
+      ...rest,
+      properties: structuredClone(properties),
+    };
+  }
+
   setActiveObject(object, offset = {}) {
-    this.cleanAllSelections();
-    const { id, type, properties, ...rest } = object;
-    const activeObject = structuredClone({ id, type, properties });
-    this.activeObject = { ...activeObject, ...rest, ...offset };
-    this.toggleObjectSelection(object.id);
+    this.selectObjects([object.id], object.id, offset);
+  }
+
+  selectObjects(ids, activeObjectId = null, offset = {}) {
+    this.selectedObjectsIds = [...ids];
+
+    if (activeObjectId != null) {
+      const object = this.getObjectById(activeObjectId);
+      if (object) {
+        const { id, type, properties, ...rest } = object;
+        const activeObject = structuredClone({ id, type, properties });
+        this.activeObject = { ...activeObject, ...rest, ...offset };
+      } else {
+        this.activeObject = null;
+      }
+    } else {
+      this.activeObject = null;
+    }
+
     super.emit('stateChange');
   }
 
@@ -115,20 +166,28 @@ class Store extends Observable {
     super.emit('stateChange');
   }
 
-  async replaceObjects(objects) {
+  async replaceObjects(objects, options = {}) {
     this.objects = await this.collection.replace(objects);
-    this.pushToHistory("update");
+    if (options.recordHistory !== false) {
+      this.pushHistoryEntry(options.historyAction || "update");
+    }
     this.selectedObjectsIds = [];
     this.activeObject = null;
-    super.emit('stateChange');
+    if (options.emitStateChange !== false) {
+      super.emit('stateChange');
+    }
   }
 
-  async clearObjects() {
+  async clearObjects(options = {}) {
     this.objects = await this.collection.clear();
-    this.pushToHistory("remove");
+    if (options.recordHistory !== false) {
+      this.pushHistoryEntry(options.historyAction || "remove");
+    }
     this.selectedObjectsIds = [];
     this.activeObject = null;
-    super.emit('stateChange');
+    if (options.emitStateChange !== false) {
+      super.emit('stateChange');
+    }
   }
 
   toggleObjectSelection(id) {
@@ -148,47 +207,121 @@ class Store extends Observable {
     super.emit('stateChange');
   }
 
-  async alignSelectedObjects(alignment) {
-    const selectedObjects = this.objects.filter((object) =>
-      this.selectedObjectsIds.includes(object.id)
-    );
-    const updateObjects = shaper.alignObjects(selectedObjects, alignment);
-    await this.collection.updateMany(updateObjects)
-    this.objects = this.collection.getAll();
-
-    this.pushToHistory("update");
+  setSelectedObjectIds(ids) {
+    this.selectedObjectsIds = [...ids];
+    if (!ids.includes(this.activeObject?.id)) {
+      this.activeObject = null;
+    }
     super.emit('stateChange');
   }
 
-  async moveToFront(objectId) {
-      const index = this.objects.findIndex((obj) => obj.id === objectId);
-      if (index > -1) {
-        const object = this.objects[index];
-        const reorderedObjects = [
-          ...this.objects.slice(0, index),
-          ...this.objects.slice(index + 1),
-          object,
-        ];
-        this.objects = await this.collection.replace(reorderedObjects);
-        this.pushToHistory("update");
-        super.emit('stateChange');
-      }
+  async updateObject(id, updates, options = {}) {
+    const object = this.getObjectById(id);
+    if (!object) {
+      return null;
     }
-  
-    async moveToBack(objectId) {
-      const index = this.objects.findIndex((obj) => obj.id === objectId);
-      if (index > -1) {
-        const object = this.objects[index];
-        const reorderedObjects = [
-          object,
-          ...this.objects.slice(0, index),
-          ...this.objects.slice(index + 1),
-        ];
-        this.objects = await this.collection.replace(reorderedObjects);
-        this.pushToHistory("update");
-        super.emit('stateChange');
-      }
+
+    const nextObject = {
+      ...object,
+      ...updates,
+      properties: {
+        ...object.properties,
+        ...(updates.properties || {}),
+      },
+    };
+
+    this.objects = await this.collection.update(id, nextObject);
+
+    if (this.activeObject?.id === id) {
+      this.syncActiveObject(id);
     }
+    if (options.recordHistory !== false) {
+      this.pushHistoryEntry(options.historyAction || "update");
+    }
+    if (options.emitStateChange !== false) {
+      super.emit('stateChange');
+    }
+
+    return this.getObjectById(id);
+  }
+
+  async alignObjectIds(objectIds, alignment, options = {}) {
+    const selectedObjects = this.objects.filter((object) =>
+      objectIds.includes(object.id)
+    );
+    if (selectedObjects.length === 0) {
+      return [];
+    }
+    const updateObjects = shaper.alignObjects(selectedObjects, alignment);
+    await this.collection.updateMany(updateObjects);
+    this.objects = this.collection.getAll();
+
+    if (this.activeObject) {
+      this.syncActiveObject();
+    }
+    if (options.recordHistory !== false) {
+      this.pushHistoryEntry(options.historyAction || "update");
+    }
+    if (options.emitStateChange !== false) {
+      super.emit('stateChange');
+    }
+
+    return updateObjects;
+  }
+
+  async alignSelectedObjects(alignment, options = {}) {
+    return this.alignObjectIds(this.selectedObjectsIds, alignment, options);
+  }
+
+  async moveToFront(objectId, options = {}) {
+    const index = this.objects.findIndex((obj) => obj.id === objectId);
+    if (index === -1) {
+      return false;
+    }
+
+    const object = this.objects[index];
+    const reorderedObjects = [
+      ...this.objects.slice(0, index),
+      ...this.objects.slice(index + 1),
+      object,
+    ];
+    this.objects = await this.collection.replace(reorderedObjects);
+    this.syncActiveObject(objectId);
+
+    if (options.recordHistory !== false) {
+      this.pushHistoryEntry(options.historyAction || "update");
+    }
+    if (options.emitStateChange !== false) {
+      super.emit('stateChange');
+    }
+
+    return true;
+  }
+
+  async moveToBack(objectId, options = {}) {
+    const index = this.objects.findIndex((obj) => obj.id === objectId);
+    if (index === -1) {
+      return false;
+    }
+
+    const object = this.objects[index];
+    const reorderedObjects = [
+      object,
+      ...this.objects.slice(0, index),
+      ...this.objects.slice(index + 1),
+    ];
+    this.objects = await this.collection.replace(reorderedObjects);
+    this.syncActiveObject(objectId);
+
+    if (options.recordHistory !== false) {
+      this.pushHistoryEntry(options.historyAction || "update");
+    }
+    if (options.emitStateChange !== false) {
+      super.emit('stateChange');
+    }
+
+    return true;
+  }
   copySelectedObjects() {
     if (this.selectedObjectsIds.length === 0) {
       alert("No objects to copy");
@@ -225,7 +358,7 @@ class Store extends Observable {
     try {
       await Promise.all(addPromises);
       this.objects = this.collection.getAll();
-      this.pushToHistory("add");
+      this.pushHistoryEntry("add");
       super.emit('stateChange');
     } catch (error) {
       console.error("Error pasting objects:", error);
@@ -278,14 +411,22 @@ class Store extends Observable {
     }
   }
 
-  async removeObject(objectId) {
+  async removeObject(objectId, options = {}) {
+    if (!this.getObjectById(objectId)) {
+      return false;
+    }
     this.objects = await this.collection.remove(objectId);
     this.selectedObjectsIds = this.selectedObjectsIds.filter(
       (id) => id !== objectId
     );
     this.activeObject = null;
-    this.pushToHistory("remove");
-    super.emit('stateChange');
+    if (options.recordHistory !== false) {
+      this.pushHistoryEntry(options.historyAction || "remove");
+    }
+    if (options.emitStateChange !== false) {
+      super.emit('stateChange');
+    }
+    return true;
   }
 
 }

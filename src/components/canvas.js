@@ -1,3 +1,4 @@
+import commands from "../core/commands/index.js";
 import shaper from "../store/shaper.js";
 
 class Canvas {
@@ -144,10 +145,18 @@ class Canvas {
     const activeObject = this.store.getActiveObject();
     const newShapePlaceholder = this.store.getNewShapePlaceholder();
     if (this.isDragging && newShapePlaceholder) {
-      this.store.addShape(newShapePlaceholder.type, newShapePlaceholder);
+      commands.createShapeCommand({
+        store: this.store,
+        shapeType: newShapePlaceholder.type,
+        properties: newShapePlaceholder,
+      });
     } else if ((this.isDragging || this.isSizing) && activeObject) {
       const { id, properties } = activeObject;
-      this.store.updateActiveObjectProps(id, properties);
+      commands.updateObjectCommand({
+        store: this.store,
+        objectId: id,
+        properties,
+      });
     } else if (this.selection) {
       this.store.selectedObjectsInRect(this.selection);
     }
@@ -212,7 +221,10 @@ class Canvas {
       event.preventDefault();
       const activeObject = this.store.getActiveObject();
       if (activeObject) {
-        this.store.removeObject(activeObject.id);
+        commands.removeObjectCommand({
+          store: this.store,
+          objectId: activeObject.id,
+        });
       }
     }
     if (event.key === "Escape") {

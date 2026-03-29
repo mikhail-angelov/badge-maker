@@ -3,10 +3,17 @@ class IndexedDB {
     this.dbName = dbName;
     this.storeName = storeName;
     this.db = null;
+    this.isMemoryFallback = false;
   }
 
   initDB() {
     return new Promise((resolve, reject) => {
+      if (typeof indexedDB === "undefined") {
+        this.isMemoryFallback = true;
+        resolve(null);
+        return;
+      }
+
       const request = indexedDB.open(this.dbName, 1);
 
       request.onupgradeneeded = (event) => {
@@ -18,21 +25,29 @@ class IndexedDB {
 
       request.onsuccess = (event) => {
         this.db = event.target.result;
+        this.isMemoryFallback = false;
         resolve(this.db);
       };
 
       request.onerror = (event) => {
-        console.error(
-          "IndexedDB error during initialization:",
-          event.target.errorCode
+        console.warn(
+          "IndexedDB unavailable, falling back to in-memory storage:",
+          event.target.errorCode || event.target.error?.message || "unknown"
         );
-        reject(event.target.errorCode);
+        this.db = null;
+        this.isMemoryFallback = true;
+        resolve(null);
       };
     });
   }
 
   saveObject(object) {
     return new Promise((resolve, reject) => {
+      if (!this.db || this.isMemoryFallback) {
+        resolve();
+        return;
+      }
+
       const transaction = this.db.transaction([this.storeName], "readwrite");
       const store = transaction.objectStore(this.storeName);
       const request = store.put(object);
@@ -53,6 +68,11 @@ class IndexedDB {
 
   saveObjects(objects) {
     return new Promise((resolve, reject) => {
+      if (!this.db || this.isMemoryFallback) {
+        resolve();
+        return;
+      }
+
       const transaction = this.db.transaction([this.storeName], "readwrite");
       const store = transaction.objectStore(this.storeName);
       let errorOccurred = false;
@@ -84,6 +104,11 @@ class IndexedDB {
 
   loadObjects() {
     return new Promise((resolve, reject) => {
+      if (!this.db || this.isMemoryFallback) {
+        resolve([]);
+        return;
+      }
+
       const transaction = this.db.transaction([this.storeName], "readonly");
       const store = transaction.objectStore(this.storeName);
       const request = store.getAll();
@@ -104,6 +129,11 @@ class IndexedDB {
 
   deleteObject(id) {
     return new Promise((resolve, reject) => {
+      if (!this.db || this.isMemoryFallback) {
+        resolve();
+        return;
+      }
+
       const transaction = this.db.transaction([this.storeName], "readwrite");
       const store = transaction.objectStore(this.storeName);
       const request = store.delete(id);
@@ -124,6 +154,11 @@ class IndexedDB {
 
   deleteAllObjects() {
     return new Promise((resolve, reject) => {
+      if (!this.db || this.isMemoryFallback) {
+        resolve();
+        return;
+      }
+
       const transaction = this.db.transaction([this.storeName], "readwrite");
       const store = transaction.objectStore(this.storeName);
       const request = store.clear();

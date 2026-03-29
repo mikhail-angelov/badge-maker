@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Badge Maker</title>
+    <title>Badge Maker AI Mode</title>
     <link rel="icon" href="favicon.ico" sizes="any" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="main">
+    <div class="main ai-mode">
       <div id="left-panel">
         <h2 class="title">3D Badge maker</h2>
         <div class="row">
@@ -24,7 +24,7 @@
         </div>
         <ul id="object-items" class="column"></ul>
         <button id="clean-canvas">Clean</button>
-        <a class="mode-link" href="ai.html">Open AI mode</a>
+        <a class="mode-link" href="index.html">Open client-only mode</a>
       </div>
       <div id="canvas-container">
         <div id="tool-panel">
@@ -46,6 +46,7 @@
         <canvas id="canvas" width="800" height="600" tabindex="0"></canvas>
       </div>
       <div id="properties-panel"></div>
+      <div id="ai-panel"></div>
     </div>
     <div id="footer">
       <div class="logo">Ѣ</div>
@@ -54,6 +55,6 @@
         <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub Logo" width="26" height="26" />
       </a>
     </div>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app-ai.js"></script>
   </body>
 </html>

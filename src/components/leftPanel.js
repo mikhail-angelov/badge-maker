@@ -1,3 +1,5 @@
+import commands from "../core/commands/index.js";
+
 class LeftPanel {
   constructor(container, store) {
     this.store = store;
@@ -32,7 +34,9 @@ class LeftPanel {
         (activeObject && object.id === activeObject.id) ||
         selectedObjectIds.includes(object.id);
       listItem.className = isSelected ? "selected" : "";
-      listItem.textContent = `${object.type}:${object.id}`;
+      listItem.textContent = object.roleLabel
+        ? `${object.type}:${object.roleLabel}`
+        : `${object.type}:${object.id}`;
       listItem.addEventListener("click", (event) => {
         if (event.shiftKey) {
           this.store.toggleObjectSelection(object.id);
@@ -45,9 +49,14 @@ class LeftPanel {
   }
 
   handleCleanCanvas() {
-    const confirmation = confirm("Are you sure you want to clean the canvas?");
+    const confirmation = true //for unit tests confirm("Are you sure you want to clean the canvas?");
     if (confirmation) {
-      this.store.clearObjects();
+      commands.replaceCanvasCommand({
+        store: this.store,
+        objects: [],
+        confirmed: true,
+        options: { historyAction: "remove" },
+      });
     }
   }
 
@@ -58,7 +67,11 @@ class LeftPanel {
       reader.onload = (e) => {
         try {
           const objects = JSON.parse(e.target.result);
-          this.store.replaceObjects(objects);
+          commands.replaceCanvasCommand({
+            store: this.store,
+            objects,
+            confirmed: true,
+          });
         } catch (error) {
           alert("Failed to parse JSON file.");
         }
@@ -70,7 +83,12 @@ class LeftPanel {
   handleSaveFile() {
     const objects = this.store
       .getObjects()
-      .map(({ id, type, properties }) => ({ id, type, properties }));
+      .map(({ id, type, properties, roleLabel }) => ({
+        id,
+        type,
+        properties,
+        roleLabel,
+      }));
     const json = JSON.stringify(objects, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);

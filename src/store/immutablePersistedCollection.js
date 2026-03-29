@@ -2,6 +2,7 @@ export class ImmutablePersistedCollection {
   constructor(db, collectionName) {
     this.db = db;
     this.items = Object.freeze([]);
+    this.initPromise = null;
   }
 
   freezeItem(item) {
@@ -13,15 +14,26 @@ export class ImmutablePersistedCollection {
   }
 
   async init() {
-    try {
-      await this.db.initDB();
-      const items = await this.db.loadObjects();
-      this.items = Object.freeze(this.loadItems(items));
-      return this.items;
-    } catch (error) {
-      console.error("Error initializing collection:", error);
-      throw error;
+    if (!this.initPromise) {
+      this.initPromise = (async () => {
+        try {
+          await this.db.initDB();
+          const items = await this.db.loadObjects();
+          this.items = Object.freeze(this.loadItems(items));
+          return this.items;
+        } catch (error) {
+          console.error("Error initializing collection:", error);
+          this.initPromise = null;
+          throw error;
+        }
+      })();
     }
+
+    return this.initPromise;
+  }
+
+  ensureReady() {
+    return this.init();
   }
 
   loadItems(items) {
@@ -34,8 +46,9 @@ export class ImmutablePersistedCollection {
       return this.freezeItem(item);
     });
   }
-  async storeObject({id, type, properties}) {
-    return await this.db.saveObject({id, type, properties});
+  async storeObject(item) {
+    const { image, rect, ...persistedItem } = item;
+    return await this.db.saveObject(persistedItem);
   } 
 
   getAll() {
@@ -44,6 +57,7 @@ export class ImmutablePersistedCollection {
 
   async add(item) {
     try {
+      await this.ensureReady();
       await this.storeObject(item);
       this.items = Object.freeze([...this.items, this.freezeItem(item)]);
       return this.items;
@@ -55,6 +69,7 @@ export class ImmutablePersistedCollection {
 
   async update(id, updates) {
     try {
+      await this.ensureReady();
       await this.storeObject({ id, ...updates });
       this.items = Object.freeze(
         this.items.map((item) =>
@@ -69,6 +84,7 @@ export class ImmutablePersistedCollection {
   }
   async updateMany(updates) {
     try {
+      await this.ensureReady();
       const updatePromises = updates.map(({ id, ...changes }) => 
         this.storeObject({ id, ...changes })
       );
@@ -91,6 +107,7 @@ export class ImmutablePersistedCollection {
 
   async remove(id) {
     try {
+      await this.ensureReady();
       await this.db.deleteObject(id);
       this.items = Object.freeze(this.items.filter((item) => item.id !== id));
       return this.items;
@@ -102,6 +119,7 @@ export class ImmutablePersistedCollection {
 
   async clear() {
     try {
+      await this.ensureReady();
       await this.db.deleteAllObjects();
       this.items = Object.freeze([]);
       return this.items;
@@ -113,6 +131,7 @@ export class ImmutablePersistedCollection {
 
   async replace(newItems) {
     try {
+      await this.ensureReady();
       await this.db.deleteAllObjects();
       await Promise.all(newItems.map((o) => this.storeObject(o)));
       this.items = Object.freeze(this.loadItems(newItems));

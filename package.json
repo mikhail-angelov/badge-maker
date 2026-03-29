@@ -1,14 +1,18 @@
 {
   "name": "badge-maker",
   "version": "1.0.0",
-  "description": "",
+  "description": "Badge maker + AI tools",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "dev": "npx http-server",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server/index.js",
+    "dev": "node --env-file=.env --watch server/index.js",
+    "test": "node --test"
   },
   "keywords": [
-    "canvas"
+    "canvas",
+    "AI",
+    "javascript"
   ],
   "author": "mikhail.angelov@gmail.com",
   "license": "MIT"

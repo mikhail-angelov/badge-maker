@@ -1,3 +1,5 @@
+import { measureCanvasText } from "../core/fitting/measureCanvasText.js";
+
 class Shape{
   constructor(id, type, properties) {
     this.id = id;
@@ -37,6 +39,7 @@ const shapePropertiesMap = {
     fontSize: "number",
     rotation: "number",
     text: "text",
+    anchor: "text",
     color: "color",
     fontFamily: "fontFamily",
   },
@@ -47,6 +50,7 @@ const shapePropertiesMap = {
     radius: "number",
     startAngle: "number",
     kerning: "number",
+    layoutMode: "text",
     text: "text",
     textInside: "boolean",
     inwardFacing: "boolean",
@@ -55,15 +59,9 @@ const shapePropertiesMap = {
   },
 };
 
-const divForMeasureText = document.createElement("div");
-divForMeasureText.innerHTML = "";
-divForMeasureText.style.position = "absolute";
-divForMeasureText.style.top = "-10000px";
-divForMeasureText.style.left = "-10000px";
-document.body.appendChild(divForMeasureText);
-
 const TEXT_OUTLINE_PADDING = 5;
 const RECT_OUTLINE_PADDING = 2;
+const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
 
 const p90 = Math.PI * 0.5;
 const p180 = Math.PI;
@@ -121,15 +119,19 @@ const renderText = (context, shape) => {
     fontFamily,
     color,
     rotation = 0,
+    anchor = "origin",
+    textAlign = anchor === "center" ? "center" : "left",
+    textBaseline = anchor === "center" ? "middle" : "alphabetic",
   } = shape.properties;
+  const textBox = getTextBox(shape.properties);
   context.fillStyle = color || "black";
   context.font = fontSize + "pt " + fontFamily;
+  context.textAlign = textAlign;
+  context.textBaseline = textBaseline;
 
   if (rotation) {
-    // Measure the text width to calculate the center
-    const textWidth = context.measureText(text).width;
-    const centerX = x + textWidth / 2;
-    const centerY = y;
+    const centerX = textBox.x + textBox.width / 2;
+    const centerY = textBox.y + textBox.height / 2;
 
     // Apply rotation around the center of the text
     context.translate(centerX, centerY);
@@ -161,10 +163,11 @@ const renderCircleText = (context, shape) => {
 
   // calculate height of the font. Many ways to do this
   // you can replace with your own!
-  divForMeasureText.innerHTML = text;
-  divForMeasureText.style.fontFamily = fontFamily;
-  divForMeasureText.style.fontSize = `${fontSize}pt`;
-  const textHeight = divForMeasureText.offsetHeight;
+  const textMeasurement =
+    measureCanvasText({ text, fontSize, fontFamily, kerning }) || {
+      height: fontSize * 1.2,
+    };
+  const textHeight = textMeasurement.height;
 
   // in cases where we are drawing outside radius,
   // expand radius to handle it
@@ -333,15 +336,31 @@ const getCircleBox = (properties) => {
   };
 };
 const getTextBox = (properties) => {
-  const { x, y, text, fontFamily, fontSize } = properties;
-  divForMeasureText.innerHTML = text;
-  divForMeasureText.style.fontFamily = fontFamily;
-  divForMeasureText.style.fontSize = `${fontSize}pt`;
+  const {
+    x,
+    y,
+    text,
+    fontFamily,
+    fontSize,
+    anchor = "origin",
+    textAlign = anchor === "center" ? "center" : "left",
+    textBaseline = anchor === "center" ? "middle" : "alphabetic",
+  } = properties;
+  const measurement =
+    measureCanvasText({ text, fontSize, fontFamily }) || {
+      width: Math.max(String(text).length, 1) * fontSize * 0.6,
+      height: fontSize * 1.2,
+    };
+  const width = measurement.width;
+  const height = measurement.height;
+  const left =
+    textAlign === "center" ? x - width / 2 : textAlign === "right" ? x - width : x;
+  const top = textBaseline === "middle" ? y - height / 2 : y - height;
   return {
-    x: x - TEXT_OUTLINE_PADDING,
-    y: y - divForMeasureText.offsetHeight - TEXT_OUTLINE_PADDING,
-    width: divForMeasureText.offsetWidth + TEXT_OUTLINE_PADDING * 2,
-    height: divForMeasureText.offsetHeight + TEXT_OUTLINE_PADDING * 2,
+    x: left - TEXT_OUTLINE_PADDING,
+    y: top - TEXT_OUTLINE_PADDING,
+    width: width + TEXT_OUTLINE_PADDING * 2,
+    height: height + TEXT_OUTLINE_PADDING * 2,
   };
 };
 //mutate shape
@@ -537,8 +556,14 @@ const alignObjects = (objects, alignment) => {
     return objects.map((object) => {
       const { x, width } = shapeBoxMap[object.type](object.properties);
       const shiftX = averageCenterX - (x + width / 2);
-      object.properties.x += shiftX;
-      return object;
+      return {
+        id: object.id,
+        type: object.type,
+        properties: {
+          ...object.properties,
+          x: object.properties.x + shiftX,
+        },
+      };
     });
   } else if (alignment === "center-vertical") {
     // Calculate the average vertical center y coordinate
@@ -552,8 +577,14 @@ const alignObjects = (objects, alignment) => {
     return objects.map((object) => {
       const { y, height } = shapeBoxMap[object.type](object.properties);
       const shiftY = averageCenterY - (y + height / 2);
-      object.properties.y += shiftY;
-      return object;
+      return {
+        id: object.id,
+        type: object.type,
+        properties: {
+          ...object.properties,
+          y: object.properties.y + shiftY,
+        },
+      };
     });
   } else if (alignment === "justify-left") {
     // Align all shapes to the leftmost x coordinate
@@ -564,8 +595,14 @@ const alignObjects = (objects, alignment) => {
     return objects.map((object) => {
       const { x } = shapeBoxMap[object.type](object.properties);
       const shiftX = leftmostX - x;
-      object.properties.x += shiftX;
-      return object;
+      return {
+        id: object.id,
+        type: object.type,
+        properties: {
+          ...object.properties,
+          x: object.properties.x + shiftX,
+        },
+      };
     });
   } else if (alignment === "justify-right") {
     // Align all shapes to the rightmost x coordinate
@@ -579,8 +616,14 @@ const alignObjects = (objects, alignment) => {
     return objects.map((object) => {
       const { x, width } = shapeBoxMap[object.type](object.properties);
       const shiftX = rightmostX - (x + width);
-      object.properties.x += shiftX;
-      return object;
+      return {
+        id: object.id,
+        type: object.type,
+        properties: {
+          ...object.properties,
+          x: object.properties.x + shiftX,
+        },
+      };
     });
   } else if (alignment === "justify-top") {
     // Align all shapes to the topmost y coordinate
@@ -591,8 +634,14 @@ const alignObjects = (objects, alignment) => {
     return objects.map((object) => {
       const { y } = shapeBoxMap[object.type](object.properties);
       const shiftY = topmostY - y;
-      object.properties.y += shiftY;
-      return object;
+      return {
+        id: object.id,
+        type: object.type,
+        properties: {
+          ...object.properties,
+          y: object.properties.y + shiftY,
+        },
+      };
     });
   } else if (alignment === "justify-bottom") {
     // Align all shapes to the bottommost y coordinate
@@ -606,15 +655,26 @@ const alignObjects = (objects, alignment) => {
     return objects.map((object) => {
       const { y, height } = shapeBoxMap[object.type](object.properties);
       const shiftY = bottommostY - (y + height);
-      object.properties.y += shiftY;
-      return object;
+      return {
+        id: object.id,
+        type: object.type,
+        properties: {
+          ...object.properties,
+          y: object.properties.y + shiftY,
+        },
+      };
     });
   }
-  return objects;
+  return objects.map((object) => ({
+    id: object.id,
+    type: object.type,
+    properties: { ...object.properties },
+  }));
 };
 
 const createShape = (type, properties) => {
   let shape;
+  const { roleLabel, ...shapeProperties } = properties;
   const id = Date.now();
 
   switch (type) {
@@ -625,7 +685,7 @@ const createShape = (type, properties) => {
         width: 100,
         height: 100,
         color: "blue",
-        ...properties,
+        ...shapeProperties,
       });
       break;
     case "image":
@@ -634,7 +694,7 @@ const createShape = (type, properties) => {
         y: 240,
         width: 100,
         height: 100,
-        ...properties,
+        ...shapeProperties,
       });
       //load image
       const image = new Image();
@@ -643,39 +703,60 @@ const createShape = (type, properties) => {
       break;
     case "circle":
       shape = new Shape(id, "circle", {
-        x: properties.x + properties.width / 2,
-        y: properties.y + properties.height / 2,
-        radius: Math.min(properties.width, properties.height) / 2,
-        color: properties.color || "red",
+        x:
+          isFiniteNumber(shapeProperties.x) &&
+          isFiniteNumber(shapeProperties.y) &&
+          isFiniteNumber(shapeProperties.radius)
+            ? shapeProperties.x
+            : shapeProperties.x + shapeProperties.width / 2,
+        y:
+          isFiniteNumber(shapeProperties.x) &&
+          isFiniteNumber(shapeProperties.y) &&
+          isFiniteNumber(shapeProperties.radius)
+            ? shapeProperties.y
+            : shapeProperties.y + shapeProperties.height / 2,
+        radius: isFiniteNumber(shapeProperties.radius)
+          ? shapeProperties.radius
+          : Math.min(shapeProperties.width, shapeProperties.height) / 2,
+        color: shapeProperties.color || "red",
       });
       break;
     case "text":
       shape = new Shape(id, "text", {
-        x: properties.x,
-        y: properties.y,
+        x: 240,
+        y: 240,
         text: "lorem ipsum",
         fontFamily: "Arial",
         fontSize: 18,
-        color: properties.color || "black",
+        anchor: "origin",
+        color: "black",
         rotation: 0,
+        ...shapeProperties,
       });
       break;
     case "circle-text":
       shape = new Shape(id, "circle-text", {
-        x: properties.x + properties.width / 2,
-        y: properties.y + properties.height / 2,
-        radius: Math.min(properties.width, properties.height) / 2,
-        color: properties.color || "red",
+        x: shapeProperties.x,
+        y: shapeProperties.y,
+        radius: shapeProperties.radius,
+        color: "black",
         text: "lorem ipsum",
         fontFamily: "Arial",
         fontSize: 18,
         startAngle: 0,
         kerning: 0,
+        layoutMode: "top-arc",
+        ...shapeProperties,
       });
       break;
     default:
       throw new Error("Unknown shape type");
   }
+
+  if (roleLabel) {
+    shape.roleLabel = roleLabel;
+  }
+
   return shape;
 };
 
