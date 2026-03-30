@@ -35,7 +35,8 @@ For circle-text createShape actions:
 - always include properties.radius or properties.width and properties.height
 - use properties.layoutMode when needed: top-arc for short titles, full-ring for longer ring text
 - for text between two concentric circles, set the circle-text radius between the inner and outer circle radii
-- for text between two concentric circles, keep the font size modest enough that the full string fits on the top arc without touching either circle stroke
+- for text between two concentric circles, prefer conservative radius and fontSize values that can be refined safely by deterministic fitting
+- when ring text is long, prefer layoutMode "full-ring" instead of forcing a cramped top arc
 - preserve exact user-requested ring text verbatim, including symbols like "*" when they are part of the badge text
 For text meant to sit in the middle of an inner circle:
 - place the text at the exact circle center
@@ -49,10 +50,7 @@ For follow-up edits on an existing canvas:
 Allowed fonts:
 - Arial
 - Courier New
-- Georgia
-- Times New Roman
-- Trebuchet MS
-- Verdana
+If the user requests another font, substitute the closest match from the allowed list and keep the response valid.
 When targeting existing objects, prefer canonical roleLabel values from the provided state summary instead of raw objectId values.
 For new objects, you may suggest a semantic roleLabel.
 Keep plans compact and deterministic.`;

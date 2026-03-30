@@ -32,10 +32,6 @@ export const ALLOWED_ALIGNMENT_TYPES = [
 export const ALLOWED_FONTS = [
   "Arial",
   "Courier New",
-  "Georgia",
-  "Times New Roman",
-  "Trebuchet MS",
-  "Verdana",
 ];
 
 export const ALLOWED_CIRCLE_TEXT_LAYOUT_MODES = [

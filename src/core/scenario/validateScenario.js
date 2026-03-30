@@ -4,10 +4,16 @@ import { validateAction } from "./validateAction.js";
 
 export const validateScenario = (scenario) => {
   const errors = [];
+  const warnings = [];
   const normalizedScenario = normalizeScenario(scenario);
 
   if (!normalizedScenario || typeof normalizedScenario !== "object" || Array.isArray(normalizedScenario)) {
-    return { ok: false, errors: ["Scenario must be an object"], scenario: null };
+    return {
+      ok: false,
+      errors: ["Scenario must be an object"],
+      warnings,
+      scenario: null,
+    };
   }
 
   if (normalizedScenario.schemaVersion !== SCENARIO_SCHEMA_VERSION) {
@@ -18,13 +24,16 @@ export const validateScenario = (scenario) => {
     errors.push("actions must be a non-empty array");
   } else {
     normalizedScenario.actions.forEach((action, index) => {
-      errors.push(...validateAction(action, index));
+      const validation = validateAction(action, index);
+      errors.push(...validation.errors);
+      warnings.push(...validation.warnings);
     });
   }
 
   return {
     ok: errors.length === 0,
     errors,
+    warnings,
     scenario: errors.length === 0 ? structuredClone(normalizedScenario) : null,
   };
 };

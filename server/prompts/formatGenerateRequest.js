@@ -35,7 +35,7 @@ Draft examples:
     "payload":{
       "shapeType":"circle",
       "roleLabel":"inner-circle",
-      "properties":{"x":200,"y":160,"radius":82,"color":"#1f1f1f"}
+      "properties":{"x":200,"y":160,"radius":82,"color":"#000000"}
     }
   }
   {
@@ -55,7 +55,20 @@ Draft examples:
     }
   }`;
 
-export const formatGenerateRequest = ({ prompt, stateSummary }) => `
+const buildCreateOnlyInstructions = ({ stateSummary, forceCreateOnly = false }) => {
+  if (!forceCreateOnly && stateSummary?.availableRoleLabels?.length) {
+    return "";
+  }
+
+  return `
+
+Important constraint:
+- There are no targetable existing objects for refinement right now.
+- Do not use updateObject, removeObject, moveToFront, moveToBack, alignObjects, or selectObjects against existing objects.
+- Return a self-contained create-from-scratch scenario using createShape actions, or replaceCanvas only if absolutely necessary.`;
+};
+
+export const formatGenerateRequest = ({ prompt, stateSummary, forceCreateOnly = false }) => `
 User prompt:
 ${prompt}
 
@@ -90,19 +103,23 @@ Return a JSON object with this shape:
 
 Rules:
 - Use roleLabel references for existing objects when possible.
+- If there are no available role labels, do not emit actions that target existing objects.
 - Keep numeric values finite and within normal canvas bounds.
 - Use only the allowed fonts.
+- If the user asks for another font, substitute the closest allowed font instead of returning an unsupported one.
 - For simple badge symbols, prefer image shapes with properties.svgPrompt instead of external URLs.
 - For follow-up edits, prefer updating or reordering existing role labels instead of recreating everything.
 - If the user explicitly names a missing roleLabel, preserve that exact label instead of rewriting it to a different object.
 - For ring text between circles, use shapeType "circle-text" with explicit x, y, and radius.
 - Use properties.layoutMode for ring text when the wording is too long for a clean top arc.
 - For ring text, preserve the exact requested wording and punctuation.
+- Keep ring-text geometry conservative; deterministic fitting may refine radius or fontSize before preview.
 - For center initials inside a circle, use the exact circle center and properties.anchor="center".
 - Do not include comments.
 - Do not wrap the JSON in markdown fences.
 ${buildDraftExamples()}
 ${buildRefinementExamples(stateSummary)}
+${buildCreateOnlyInstructions({ stateSummary, forceCreateOnly })}
 `;
 
 export default formatGenerateRequest;

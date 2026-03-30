@@ -103,6 +103,81 @@ test("validateScenario accepts explicit circle-text layoutMode and centered text
   });
 
   assert.equal(validation.ok, true);
+  assert.deepEqual(validation.warnings, []);
+});
+
+test("validateScenario warns when top-arc ring text would widen and shrink before apply", () => {
+  const validation = validateScenario({
+    schemaVersion: 1,
+    actions: [
+      {
+        type: "createShape",
+        payload: {
+          shapeType: "circle",
+          properties: { x: 200, y: 160, radius: 110, color: "#f7df1e" },
+        },
+      },
+      {
+        type: "createShape",
+        payload: {
+          shapeType: "circle",
+          properties: { x: 200, y: 160, radius: 82, color: "#1f1f1f" },
+        },
+      },
+      {
+        type: "createShape",
+        payload: {
+          shapeType: "circle-text",
+          roleLabel: "ring-text",
+          properties: {
+            x: 200,
+            y: 160,
+            radius: 87,
+            layoutMode: "top-arc",
+            text: "undefined is not a function * ",
+            fontFamily: "Arial",
+            fontSize: 18,
+            innerRadiusHint: 82,
+            outerRadiusHint: 110,
+          },
+        },
+      },
+    ],
+  });
+
+  assert.equal(validation.ok, true);
+  assert.equal(
+    validation.warnings.some((warning) => /fontSize would shrink/.test(warning)),
+    true
+  );
+  assert.equal(
+    validation.warnings.some((warning) => /radius would shift/.test(warning)),
+    true
+  );
+});
+
+test("validateScenario rejects ring text that cannot fit even after normalization", () => {
+  const validation = validateScenario({
+    schemaVersion: 1,
+    actions: [
+      {
+        type: "createShape",
+        payload: {
+          shapeType: "circle-text",
+          properties: {
+            x: 10,
+            y: 10,
+            radius: 18,
+            text: "LONG BADGE TITLE",
+            fontSize: 24,
+          },
+        },
+      },
+    ],
+  });
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors[0], /cannot fit/);
 });
 
 test("buildStateSummary surfaces layout mode and centered text anchor", () => {

@@ -238,7 +238,7 @@ Current status:
 
 - [x] Validate explicit `layoutMode` and `anchor` values.
 - [x] Extend Deepseek prompt guidance and examples for ring layout modes and centered inner labels.
-- [~] Add stronger pre-apply warnings or rejection for visually poor but technically executable layouts.
+- [x] Add stronger pre-apply warnings or rejection for visually poor but technically executable layouts.
 
 ## Phase 6: Test and Verification Pass
 

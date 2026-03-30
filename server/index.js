@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { handleGenerate } from "./routes/generate.js";
+import { handleGenerate, handleGenerateStream } from "./routes/generate.js";
 import { handleGenerateSvg } from "./routes/generateSvg.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -90,6 +90,11 @@ const server = http.createServer(async (request, response) => {
 
   if (request.url === "/api/generate" && request.method === "POST") {
     await handleGenerate(request, response, { json });
+    return;
+  }
+
+  if (request.url === "/api/generate-stream" && request.method === "POST") {
+    await handleGenerateStream(request, response);
     return;
   }
 

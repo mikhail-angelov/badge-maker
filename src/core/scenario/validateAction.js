@@ -7,11 +7,14 @@ import {
   ALLOWED_TEXT_ANCHORS,
 } from "./schema.js";
 import { normalizeRoleLabel } from "../roles/normalizeRoleLabel.js";
+import { sanitizeCircleTextGeometry } from "../fitting/sanitizeCircleTextGeometry.js";
 
 const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
 const isNonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
 const hasFiniteProperties = (properties, keys) =>
   keys.every((key) => isFiniteNumber(properties?.[key]));
+const formatDisplayNumber = (value) =>
+  Number.isInteger(value) ? String(value) : String(Math.round(value * 10) / 10);
 
 const validateProperties = (properties, errors, path) => {
   if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
@@ -104,12 +107,73 @@ const validateTargetArray = (payload, errors, path) => {
   errors.push(`${path} must include objectIds or roleLabels`);
 };
 
+const hasStandaloneCircleTextGeometry = (properties = {}) =>
+  hasFiniteProperties(properties, ["x", "y"]) &&
+  isNonEmptyString(properties.text) &&
+  (isFiniteNumber(properties.radius) || hasFiniteProperties(properties, ["width", "height"]));
+
+const validateCircleTextLayoutQuality = (properties, errors, warnings, path) => {
+  if (!hasStandaloneCircleTextGeometry(properties)) {
+    return;
+  }
+
+  const requestedLayoutMode = properties.layoutMode;
+  const requestedFontSize = properties.fontSize;
+  const requestedRadius = properties.radius;
+  const sanitization = sanitizeCircleTextGeometry(properties);
+
+  if (!sanitization.ok) {
+    errors.push(`${path} ${sanitization.error}`);
+    return;
+  }
+
+  const { properties: sanitizedProperties, fit } = sanitization;
+
+  if (
+    requestedLayoutMode === "top-arc" &&
+    sanitizedProperties.layoutMode &&
+    sanitizedProperties.layoutMode !== requestedLayoutMode
+  ) {
+    warnings.push(
+      `${path}.layoutMode "${requestedLayoutMode}" is too cramped and would be widened to "${sanitizedProperties.layoutMode}" before apply`
+    );
+  }
+
+  if (
+    isFiniteNumber(requestedFontSize) &&
+    isFiniteNumber(sanitizedProperties.fontSize) &&
+    sanitizedProperties.fontSize < requestedFontSize
+  ) {
+    warnings.push(
+      `${path}.fontSize would shrink from ${requestedFontSize} to ${sanitizedProperties.fontSize} to keep ring text readable`
+    );
+  }
+
+  if (
+    isFiniteNumber(requestedRadius) &&
+    isFiniteNumber(sanitizedProperties.radius) &&
+    Math.abs(sanitizedProperties.radius - requestedRadius) >= 2
+  ) {
+    warnings.push(
+      `${path}.radius would shift from ${formatDisplayNumber(requestedRadius)} to ${formatDisplayNumber(sanitizedProperties.radius)} to stay inside the ring`
+    );
+  }
+
+  if (fit?.status === "tight_fit") {
+    warnings.push(`${path} is a tight fit and may still look cramped in the preview`);
+  }
+};
+
 export const validateAction = (action, index) => {
   const errors = [];
+  const warnings = [];
   const path = `actions[${index}]`;
 
   if (!action || typeof action !== "object" || Array.isArray(action)) {
-    return [`${path} must be an object`];
+    return {
+      errors: [`${path} must be an object`],
+      warnings,
+    };
   }
 
   if (!ALLOWED_ACTION_TYPES.includes(action.type)) {
@@ -188,6 +252,14 @@ export const validateAction = (action, index) => {
           `${path}.payload.properties must include x, y, text, and radius or width and height for circle-text shapes`
         );
       }
+      if (payload.shapeType === "circle-text") {
+        validateCircleTextLayoutQuality(
+          payload.properties,
+          errors,
+          warnings,
+          `${path}.payload.properties`
+        );
+      }
       break;
     case "updateObject":
       validateTargetReference(payload, errors, `${path}.payload`);
@@ -195,6 +267,12 @@ export const validateAction = (action, index) => {
         validateRoleLabel(payload.nextRoleLabel, errors, `${path}.payload.nextRoleLabel`);
       }
       validateProperties(payload.properties, errors, `${path}.payload.properties`);
+      validateCircleTextLayoutQuality(
+        payload.properties,
+        errors,
+        warnings,
+        `${path}.payload.properties`
+      );
       break;
     case "removeObject":
     case "moveToFront":
@@ -227,5 +305,8 @@ export const validateAction = (action, index) => {
       break;
   }
 
-  return errors;
+  return {
+    errors,
+    warnings,
+  };
 };

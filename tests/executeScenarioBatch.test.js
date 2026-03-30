@@ -105,6 +105,72 @@ test("executeScenarioBatch records one undo entry for multiple steps", async () 
   assert.equal(result.appliedCount, 2);
 });
 
+test("executeScenarioBatch can replace the existing canvas before applying a new scenario", async () => {
+  const store = createStore();
+  store.getState().objects.push({
+    id: 7,
+    type: "text",
+    properties: { x: 0, y: 0, text: "OLD" },
+  });
+
+  const result = await executeScenarioBatch(
+    store,
+    {
+      schemaVersion: 1,
+      actions: [
+        {
+          type: "createShape",
+          payload: {
+            shapeType: "text",
+            properties: { x: 10, y: 20, text: "NEW" },
+          },
+        },
+      ],
+    },
+    { historyAction: "batch", replaceExistingCanvas: true }
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(store.getState().objects.length, 1);
+  assert.equal(store.getState().objects[0].properties.text, "NEW");
+});
+
+test("executeScenarioBatch restores the previous canvas if replacement mode hits a failed step", async () => {
+  const store = createStore();
+  store.getState().objects.push({
+    id: 7,
+    type: "text",
+    properties: { x: 0, y: 0, text: "OLD" },
+  });
+
+  const result = await executeScenarioBatch(
+    store,
+    {
+      schemaVersion: 1,
+      actions: [
+        {
+          type: "createShape",
+          payload: {
+            shapeType: "text",
+            properties: { x: 10, y: 20, text: "NEW" },
+          },
+        },
+        {
+          type: "removeObject",
+          payload: {
+            objectId: 999,
+          },
+        },
+      ],
+    },
+    { historyAction: "batch", replaceExistingCanvas: true }
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(store.getState().objects.length, 1);
+  assert.equal(store.getState().objects[0].properties.text, "OLD");
+});
+
 test("executeScenarioBatch keeps successful steps when a later step fails", async () => {
   const store = createStore();
 

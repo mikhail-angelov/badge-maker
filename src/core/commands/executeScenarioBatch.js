@@ -126,7 +126,11 @@ const resolvePayloadTargets = (store, action, stepIndex) => {
 export const executeScenarioBatch = async (
   store,
   scenario,
-  { historyAction = "scenario", confirmedReplaceCanvas = false } = {}
+  {
+    historyAction = "scenario",
+    confirmedReplaceCanvas = false,
+    replaceExistingCanvas = false,
+  } = {}
 ) => {
   const validation = validateScenario(scenario);
   if (!validation.ok) {
@@ -145,7 +149,13 @@ export const executeScenarioBatch = async (
     };
   }
 
-  capturePreBatchSnapshot(store);
+  const preBatchSnapshot = capturePreBatchSnapshot(store);
+  if (replaceExistingCanvas) {
+    await store.replaceObjects([], {
+      recordHistory: false,
+      emitStateChange: false,
+    });
+  }
   const results = [];
   let appliedCount = 0;
 
@@ -192,6 +202,20 @@ export const executeScenarioBatch = async (
     if (result.ok) {
       appliedCount += 1;
     }
+  }
+
+  if (replaceExistingCanvas && results.some((result) => !result.ok)) {
+    await store.replaceObjects(preBatchSnapshot, {
+      recordHistory: false,
+      emitStateChange: true,
+    });
+
+    return {
+      ok: false,
+      appliedCount: 0,
+      failedCount: results.filter((result) => !result.ok).length,
+      results,
+    };
   }
 
   if (appliedCount > 0) {

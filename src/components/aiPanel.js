@@ -1,6 +1,5 @@
 import { executeScenarioBatch } from "../core/commands/executeScenarioBatch.js";
 import { generateScenario } from "../core/api/generateScenario.js";
-import { formatScenarioSummary } from "../core/scenario/formatScenarioSummary.js";
 import { validateScenario } from "../core/scenario/validateScenario.js";
 
 class AIPanel {
@@ -8,10 +7,11 @@ class AIPanel {
     this.container = container;
     this.store = store;
     this.prompt = "";
-    this.pendingScenario = null;
+    this.scenarioText = "";
     this.status = "Describe a badge to generate a Deepseek plan.";
     this.error = "";
-    this.results = [];
+    this.warnings = [];
+    this.progress = [];
 
     this.store.on("stateChange", this.render.bind(this));
     this.render();
@@ -26,36 +26,62 @@ class AIPanel {
     this.prompt = value;
   }
 
+  handleScenarioInput(value) {
+    this.scenarioText = value;
+  }
+
+  pushProgress(message) {
+    if (!message) {
+      return;
+    }
+
+    const progress = this.progress[this.progress.length - 1] === message
+      ? this.progress
+      : [...this.progress, message];
+
+    this.setState({
+      status: message,
+      progress,
+    });
+  }
+
   async handleGenerate() {
     this.setState({
       status: "Generating plan...",
       error: "",
-      results: [],
+      warnings: [],
+      progress: ["Generating plan..."],
     });
 
-    const scenario =
+    const generation =
       await generateScenario({
         prompt: this.prompt,
         stateSummary: this.store.getStateSummary(),
+        onStatus: (event) => {
+          this.pushProgress(event.message);
+        },
       });
 
-    const validation = validateScenario(scenario);
+    const validation = validateScenario(generation.scenario);
+    const nextWarnings = [...new Set([...(generation.warnings || []), ...(validation.warnings || [])])];
 
     if (!validation.ok) {
       this.setState({
-        pendingScenario: null,
         error: validation.errors.join("\n"),
+        warnings: nextWarnings,
+        progress: [...this.progress, "The generated scenario is invalid."],
+        scenarioText: "",
         status: "The generated scenario is invalid.",
-        results: [],
       });
       return;
     }
 
     this.setState({
-      pendingScenario: validation.scenario,
+      scenarioText: JSON.stringify(validation.scenario, null, 2),
       error: "",
+      warnings: nextWarnings,
+      progress: [...this.progress, "Preview ready. Review and confirm before apply."],
       status: "Preview ready. Review and confirm before apply.",
-      results: [],
     });
   }
 
@@ -75,31 +101,68 @@ class AIPanel {
     return "Create a gold sheriff badge with curved top text";
   }
 
+  shouldReplaceExistingCanvas(scenario) {
+    return (scenario.actions || []).every((action) => {
+      if (action.type === "createShape" || action.type === "clearSelection") {
+        return true;
+      }
+
+      if (action.type === "replaceCanvas") {
+        return true;
+      }
+
+      return false;
+    });
+  }
+
   async handleApply() {
-    if (!this.pendingScenario) {
+    if (!this.scenarioText.trim()) {
       return;
     }
 
-    const result = await executeScenarioBatch(this.store, this.pendingScenario, {
+    let parsedScenario;
+    try {
+      parsedScenario = JSON.parse(this.scenarioText);
+    } catch (error) {
+      this.setState({
+        error: "Scenario JSON is not valid JSON.",
+        status: "Fix the scenario JSON before apply.",
+      });
+      return;
+    }
+
+    const validation = validateScenario(parsedScenario);
+    if (!validation.ok) {
+      this.setState({
+        error: validation.errors.join("\n"),
+        warnings: validation.warnings || [],
+        status: "Fix the scenario JSON before apply.",
+      });
+      return;
+    }
+
+    const result = await executeScenarioBatch(this.store, validation.scenario, {
       historyAction: "scenario",
+      replaceExistingCanvas: this.shouldReplaceExistingCanvas(validation.scenario),
     });
 
     this.setState({
       status: result.ok
-        ? "Scenario applied."
-        : "Scenario applied with skipped steps. Review warnings below.",
-      error: "",
-      results: result.results,
-      pendingScenario: null,
+        ? "Scenario applied. You can edit the JSON and apply again."
+        : "Scenario was not applied. Fix the JSON or warnings and try again.",
+      error: result.ok ? "" : "Scenario could not be applied safely.",
+      warnings: result.ok ? [] : validation.warnings || [],
+      progress: result.ok ? [] : this.progress,
     });
   }
 
   handleCancel() {
     this.setState({
-      pendingScenario: null,
-      results: [],
+      scenarioText: "",
       error: "",
-      status: "Scenario preview cleared.",
+      warnings: [],
+      progress: [],
+      status: "Scenario JSON cleared.",
     });
   }
 
@@ -114,14 +177,17 @@ class AIPanel {
           await this.handleGenerate();
         } catch (error) {
           this.setState({
-            pendingScenario: null,
+            scenarioText: "",
             error: error.message,
             status: "Failed to generate a plan.",
-            results: [],
+            progress: [...this.progress, "Failed to generate a plan."],
           });
         }
       });
-    this.container.querySelector("#cancel-ai-plan")?.addEventListener("click", () => {
+    this.container.querySelector("#scenario-json")?.addEventListener("input", (event) => {
+      this.handleScenarioInput(event.target.value);
+    });
+    this.container.querySelector("#clear-ai-plan")?.addEventListener("click", () => {
       this.handleCancel();
     });
     this.container.querySelector("#apply-ai-plan")?.addEventListener("click", async () => {
@@ -129,37 +195,40 @@ class AIPanel {
     });
   }
 
-  renderResults() {
-    if (!this.results.length) {
+  renderWarnings() {
+    if (!this.warnings.length) {
       return "";
     }
 
     return `
-      <div class="ai-results">
-        <h3>Execution</h3>
+      <div class="ai-warnings">
+        <h3>Pre-Apply Warnings</h3>
         <ul>
-          ${this.results
-            .map(
-              (result) => `
-                <li class="${result.ok ? "ok" : "error"}">
-                  Step ${result.stepIndex + 1}: ${result.ok ? "applied" : result.message}
-                </li>
-              `
-            )
-            .join("")}
+          ${this.warnings.map((warning) => `<li>${warning}</li>`).join("")}
         </ul>
       </div>
     `;
   }
 
-  render() {
-    const stateSummaryObject = this.store.getStateSummary();
-    const preview = this.pendingScenario
-      ? formatScenarioSummary(this.pendingScenario)
-      : "No plan generated yet.";
-    const stateSummary = JSON.stringify(stateSummaryObject, null, 2);
-    const isRefinement = stateSummaryObject.objectCount > 0;
+  renderStatus() {
+    const progressMarkup = this.progress.length
+      ? `
+        <ul>
+          ${this.progress.map((message) => `<li>${message}</li>`).join("")}
+        </ul>
+      `
+      : "";
 
+    return `
+      <div class="ai-status">
+        <h3>Status</h3>
+        <p>${this.status}</p>
+        ${progressMarkup}
+      </div>
+    `;
+  }
+
+  render() {
     this.container.innerHTML = `
       <div class="ai-panel-card">
         <h2 class="title">AI Mode</h2>
@@ -167,19 +236,16 @@ class AIPanel {
         <textarea id="ai-prompt" rows="5" placeholder="${this.getPromptPlaceholder()}">${this.prompt}</textarea>
         <div class="row ai-actions">
           <button id="generate-ai-plan">${this.getGenerateButtonLabel()}</button>
-          ${this.pendingScenario ? '<button id="apply-ai-plan">Apply</button>' : ""}
-          ${this.pendingScenario ? '<button id="cancel-ai-plan">Cancel</button>' : ""}
+          ${this.scenarioText.trim() ? '<button id="apply-ai-plan">Apply</button>' : ""}
+          ${this.scenarioText.trim() ? '<button id="clear-ai-plan">Clear</button>' : ""}
         </div>
+        ${this.renderStatus()}
         <div class="ai-preview">
-          <h3>Plan Preview</h3>
-          <pre>${preview}</pre>
+          <h3>State Summary / Scenario JSON</h3>
+          <textarea id="scenario-json" rows="18" spellcheck="false" placeholder="Generated scenario JSON will appear here.">${this.scenarioText}</textarea>
         </div>
-        <div class="ai-preview">
-          <h3>State Summary</h3>
-          <pre>${stateSummary}</pre>
-        </div>
+        ${this.renderWarnings()}
         ${this.error ? `<div class="ai-error">${this.error}</div>` : ""}
-        ${this.renderResults()}
       </div>
     `;
 
