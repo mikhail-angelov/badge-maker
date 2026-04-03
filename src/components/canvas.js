@@ -314,7 +314,84 @@ class Canvas {
   }
 
   exportAsPNG() {
-    const dataURL = this.canvas.toDataURL("image/png");
+    // Get all objects from the store
+    const objects = this.store.getObjects();
+    
+    // Scale factor for higher resolution (8x as requested)
+    const scaleFactor = 8;
+    
+    if (objects.length === 0) {
+      // If no objects, export the entire canvas at higher resolution
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = this.canvas.width * scaleFactor;
+      tempCanvas.height = this.canvas.height * scaleFactor;
+      const tempContext = tempCanvas.getContext('2d');
+      
+      // Scale the context for higher resolution
+      tempContext.scale(scaleFactor, scaleFactor);
+      
+      // Draw the current canvas content
+      tempContext.drawImage(this.canvas, 0, 0);
+      
+      const dataURL = tempCanvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = dataURL;
+      link.download = "canvas.png";
+      link.click();
+      return;
+    }
+    
+    // Calculate the bounding box of all objects
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    
+    objects.forEach(object => {
+      const box = shaper.shapeBoxMap[object.type](object.properties);
+      minX = Math.min(minX, box.x);
+      minY = Math.min(minY, box.y);
+      maxX = Math.max(maxX, box.x + box.width);
+      maxY = Math.max(maxY, box.y + box.height);
+    });
+    
+    // Add some padding around the objects
+    const padding = 10;
+    const bounds = {
+      x: Math.floor(minX - padding),
+      y: Math.floor(minY - padding),
+      width: Math.ceil(maxX - minX + padding * 2),
+      height: Math.ceil(maxY - minY + padding * 2)
+    };
+    
+    // Ensure bounds are valid (positive dimensions)
+    if (bounds.width <= 0 || bounds.height <= 0) {
+      bounds.width = Math.max(bounds.width, 1);
+      bounds.height = Math.max(bounds.height, 1);
+    }
+    
+    // Create a temporary canvas with the cropped dimensions scaled up
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = bounds.width * scaleFactor;
+    tempCanvas.height = bounds.height * scaleFactor;
+    const tempContext = tempCanvas.getContext('2d');
+    
+    // Scale the context for higher resolution
+    tempContext.scale(scaleFactor, scaleFactor);
+    
+    // Clear to transparent (instead of white background)
+    tempContext.clearRect(0, 0, bounds.width, bounds.height);
+    
+    // Translate the context to draw objects relative to the bounds
+    tempContext.translate(-bounds.x, -bounds.y);
+    
+    // Draw all objects onto the temporary canvas
+    objects.forEach(object => {
+      shaper.drawShape({ context: tempContext, shape: object });
+    });
+    
+    // Export the temporary canvas as PNG
+    const dataURL = tempCanvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = dataURL;
     link.download = "canvas.png";

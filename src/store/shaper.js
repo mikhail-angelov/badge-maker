@@ -770,4 +770,5 @@ export default {
   isPointInShape,
   isShapeInRect,
   isPointInShapeSpot,
+  shapeBoxMap,
 };
